@@ -51,7 +51,7 @@ if (runstan==TRUE) {
     germdata<-list(N=N, K=K, y=fake$y, temp=as.numeric(fake$temp), origin=as.numeric(fake$origin), 
                    strat=as.numeric(fake$strat), intercept=intercept, X=X)}
   
-  fit <-stan(file = "germdate.stan", data=germdata, chains=8, iter=2000) 
+  fit <-stan(file = "germdate.stan", data=germdata, chains=8, iter=2000) #no divergent transitions 
 }
 
 #----launching shiny stan---------
