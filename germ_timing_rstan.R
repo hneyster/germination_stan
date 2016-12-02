@@ -55,5 +55,5 @@ if (runstan==TRUE) {
 }
 
 #----launching shiny stan---------
-my_sso <- launch_shinystan(fitx, rstudio = getOption("shinystan.rstudio"))
+my_sso <- launch_shinystan(fit, rstudio = getOption("shinystan.rstudio"))
 
