@@ -69,5 +69,5 @@ pairs(fit_sp, pars=c("mu_b_inter_to","mu_b_inter_ts", "mu_b_inter_so", "mu_b_int
 
 
 #----launching shiny stan---------
-my_sso <- launch_shinystan(germdate_sp_random3, rstudio = getOption("shinystan.rstudio"))
+my_sso <- launch_shinystan(fit_sp, rstudio = getOption("shinystan.rstudio"))
 
