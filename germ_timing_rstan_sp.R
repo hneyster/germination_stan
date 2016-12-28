@@ -25,6 +25,7 @@ if (realdata==TRUE) {
   nseed<-length(unique(data$uniqueid)) #1205 unique seeds
   N<-nseed
   y<-data$daysfromstart    # dependent variable
+  log_y=log(y)
   temp<-data$temp         
   strat<-data$strat
   dummy_variables <- model.matrix(~ origin, data = data) 
@@ -42,7 +43,7 @@ if (realdata==TRUE) {
                                           ifelse(sp_alph=="RUMCRI", 6, 7))))))
   nsp<-length(unique(data$sp))
   #putting all the data together: 
-  datax<-list(N=N, y=y, temp=temp, origin=origin, strat=strat,  nsp=nsp, sp=sp)
+  datax<-list(N=N, log_y=y, temp=temp, origin=origin, strat=strat,  nsp=nsp, sp=sp)
   #,nloc=nloc, nfamily=nfamily, loc=loc, family=family)
 }
 
@@ -52,7 +53,7 @@ if (runstan==TRUE) {
   if (realdata==TRUE) {germdata=datax
   } else 
   {load("Fake_germdata.RData")
-    germdata<-list(y=fake$y, temp=as.numeric(fake$temp), origin=as.numeric(fake$origin),
+    germdata<-list(log_y=fake$log_y, temp=as.numeric(fake$temp), origin=as.numeric(fake$origin),
                    strat=as.numeric(fake$strat), N=nrow(fake), sp=as.numeric(fake$sp), nsp=length(unique(fake$sp)))}
   
   fit_sp <- stan(file = "germdate_sp.stan", data=germdata, chains=4, iter=20000, warmup=12000, thin=2,  control = list(adapt_delta = 0.99)) #This model yields 915 divergent transitions -- all below the diag in the paris plot 

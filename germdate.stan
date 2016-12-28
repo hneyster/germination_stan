@@ -1,7 +1,7 @@
 data {
   int<lower=0> N; //number of obserations
   //int<lower=0> N2; // size of the new_X matrix 
-  vector[N] y; //response 
+  vector[N] log_y; //response 
   int<lower=0> K; //columns in the predictor matrix
   matrix[N,K] X; // the predictor matrix vector[N] origin;
   vector[N] temp;
@@ -9,7 +9,6 @@ data {
   vector[N] origin;
 }
 transformed data {
-vector[N] log_y;
 vector[N] inter_ts;
 vector[N] inter_to;
 vector[N] inter_so;
@@ -19,7 +18,6 @@ matrix[N,3] m2;
 matrix[N,4] inter;
 matrix[N,8] X_int;
 
-log_y=log(y);
 inter_to= temp .* origin;
 inter_so=strat .* origin;
 inter_ts=strat .* temp;
@@ -39,7 +37,7 @@ mu = X_int*beta;
 }
 model {
   //priors 
-  beta[1] ~ normal(0,10); //prior for the intercept
+  beta[1] ~ normal(0,100); //prior for the intercept
   for(i in 2:8)
    beta[i] ~ normal(0,5);//prior for the slopes 
   sigma ~ cauchy(0,5);

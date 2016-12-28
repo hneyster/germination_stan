@@ -34,7 +34,7 @@ if (realdata==TRUE) {
   covariates<-matrix(c(origin, temp, strat), nrow=N)                  #covariate matrix
   X = cbind(intercept=1, covariates) #covariates + intercept
   intercept<-rep(1, nrow(data))
-  datax<-list(N=N, K=K, y=y, temp=temp, origin=origin, strat=strat, intercept=intercept, X=X)
+  datax<-list(N=N, K=K, log_y=log(y), temp=temp, origin=origin, strat=strat, intercept=intercept, X=X)
 }
 
 ## fitting the stan model -------------------------------------------------
@@ -48,12 +48,14 @@ if (runstan==TRUE) {
     covariates<-matrix(c(origin=as.numeric(fake$origin), temp=as.numeric(fake$temp), strat=as.numeric(fake$strat)), nrow=N)                  #covariate matrix
     X <-  cbind(intercept=1, covariates) #covariates + intercept
     intercept<-rep(1, nrow(fake))
-    germdata<-list(N=N, K=K, y=fake$y, temp=as.numeric(fake$temp), origin=as.numeric(fake$origin), 
+    germdata<-list(N=N, K=K,log_y=fake$log_y, temp=as.numeric(fake$temp), origin=as.numeric(fake$origin), 
                    strat=as.numeric(fake$strat), intercept=intercept, X=X)}
   
   fit <-stan(file = "germdate.stan", data=germdata, chains=8, iter=2000) #no divergent transitions 
 }
+#save(fit, file="germdate.Rdata")
+## Legend:
+# beta1=intercept, beta2=origin, beta3=temp, beta4=strat, beta5=temp*origin, beta6=strat*origin, beta7=strat*temp, beta8=strat*temp*origin.
 
 #----launching shiny stan---------
 my_sso <- launch_shinystan(fit, rstudio = getOption("shinystan.rstudio"))
-
