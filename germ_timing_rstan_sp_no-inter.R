@@ -52,15 +52,15 @@ if (realdata==TRUE) {
 if (runstan==TRUE) {
   if (realdata==TRUE) {germdata=datax
   } else 
-  {load("Fake_germdata.RData")
+  {load("Fake_germdata_no-inter.RData")
     germdata<-list(log_y=fake$log_y, temp=as.numeric(fake$temp), origin=as.numeric(fake$origin),
                    strat=as.numeric(fake$strat), N=nrow(fake), sp=as.numeric(fake$sp), nsp=length(unique(fake$sp)))}
   
-  fit_sp <- stan(file = "germdate_sp.stan", data=germdata, chains=4, iter=20000, warmup=12000, thin=2,  control = list(adapt_delta = 0.99)) #This model yields 915 divergent transitions -- all below the diag in the paris plot 
+  fit_sp <- stan(file = "germdate_sp_no-inter.stan", data=germdata, chains=4, iter=20000, warmup=12000, thin=2,  control = list(adapt_delta = 0.99)) #This model yields 915 divergent transitions -- all below the diag in the paris plot 
 
      #For 20000 iter, with 12000 warmup, thin=2, ad=.99, get 273 divergent transisions in fake, 915 for real.  
   
-  #save(fit_sp, file="germdate_sp_fake.99_long.Rdata")
+ # save(fit_sp, file="germdate_sp_no-inter.Rdata")
 }
 
 ##pair plots show divergent transitions BELOW the diag 
