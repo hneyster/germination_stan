@@ -23,7 +23,7 @@ nsp = 7
 nfamily = 80
 nind=1205
 
-norigin=2 # origin ==1 is Europe 
+norigin = 2 # origin ==1 is Europe 
 ntemp = 4
 nstrat = 2
 
@@ -61,11 +61,11 @@ stratdiff.sd = 0.005
 ### Original with interactions below
 # interactions. 9 two-way interactions
 temporigin1 = -0.07
-temporigin2= -0.02
-temporigin3= -0.09
+temporigin2 = -0.02
+temporigin3 = -0.09
 tempstrat1 = -0.002
-tempstrat2=-0.001
-tempstrat3=-0.0025
+tempstrat2 = -0.001
+tempstrat3 = -0.0025
 originstrat = -0.022 # 
 origintempstrat1 = 0.005
 origintempstrat2 = 0.001

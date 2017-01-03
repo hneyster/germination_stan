@@ -3,7 +3,11 @@ rm(list=ls())
 options(stringsAsFactors = FALSE)
 options(shinystan.rstudio = TRUE)
 options(mc.cores = parallel::detectCores())
-setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
+
+if(length(grep("Lizzie", getwd())>0)) { 
+  setwd("~/Documents/git/projects/misc/undergrads/harold/analyses/germination_stan") 
+} else 
+  setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
 
 ##libraries
 library(rstan)
@@ -51,7 +55,7 @@ if (runstan==TRUE) {
     germdata<-list(N=N, K=K,log_y=fake$log_y, temp=as.numeric(fake$temp), origin=as.numeric(fake$origin), 
                    strat=as.numeric(fake$strat), intercept=intercept, X=X)}
   
-  fit <-stan(file = "germdate.stan", data=germdata, chains=8, iter=2000) #no divergent transitions 
+  fit <-stan(file = "germdate.stan", data=germdata, chains=4, iter=2000) # switching to 4 chains now for speed, can ramp back up to more chains later if needed
 }
 #save(fit, file="germdate.Rdata")
 ## Legend:

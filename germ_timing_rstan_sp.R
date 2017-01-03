@@ -3,7 +3,11 @@ rm(list=ls())
 options(stringsAsFactors = FALSE)
 options(shinystan.rstudio = TRUE)
 options(mc.cores = parallel::detectCores())
-setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
+
+if(length(grep("Lizzie", getwd())>0)) { 
+  setwd("~/Documents/git/projects/misc/undergrads/harold/analyses/germination_stan") 
+} else 
+  setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
 
 ##libraries
 library(rstan)
@@ -41,9 +45,9 @@ if (realdata==TRUE) {
                             ifelse(sp_alph=="PLALAN", 4,
                                    ifelse(sp_alph=="PLAMAJ", 5, 
                                           ifelse(sp_alph=="RUMCRI", 6, 7))))))
-  nsp<-length(unique(data$sp))
+  nsp <- length(unique(data$sp))
   #putting all the data together: 
-  datax<-list(N=N, log_y=log_y, temp=temp, origin=origin, strat=strat,  nsp=nsp, sp=sp)
+  datax <- list(N=N, log_y=log_y, temp=temp, origin=origin, strat=strat,  nsp=nsp, sp=sp)
   #,nloc=nloc, nfamily=nfamily, loc=loc, family=family)
 }
 
@@ -56,7 +60,7 @@ if (runstan==TRUE) {
     germdata<-list(log_y=fake$log_y, temp=as.numeric(fake$temp), origin=as.numeric(fake$origin),
                    strat=as.numeric(fake$strat), N=nrow(fake), sp=as.numeric(fake$sp), nsp=length(unique(fake$sp)))}
   
-  fit_sp <- stan(file = "germdate_sp.stan", data=germdata, chains=4, iter=20000, warmup=12000, thin=2,  control = list(adapt_delta = 0.99)) #This model yields 915 divergent transitions -- all below the diag in the paris plot 
+  fit_sp <- stan(file = "germdate_sp.stan", data=germdata, chains=4, iter=2000) #This model yields 915 divergent transitions -- all below the diag in the paris plot 
 
      #For 20000 iter, with 12000 warmup, thin=2, ad=.99, get 273 divergent transisions in fake, 915 for real.  
   
