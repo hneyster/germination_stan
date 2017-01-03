@@ -7,8 +7,8 @@
 
 # <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <>
 
-if(length(grep("danflynn", getwd())>0)) { 
-  setwd("~/Documents/git/germination_stan") 
+if(length(grep("Lizzie", getwd())>0)) { 
+  setwd("~/Documents/git/projects/misc/undergrads/harold/analyses/germination_stan") 
 } else 
   setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
 
@@ -46,8 +46,8 @@ treatcombo = paste(temp, origin, strat, sep = "_")
 #locdiff = 0 
 tempdiff1 = 0.01 #logged days earlier from 1 to 2
 tempdiff2= -0.01 #logged days earlier from 2 to 3
-tempdiff3= .02 #logged days earlier from 3 to 4
-origindiff =0.9
+tempdiff3= 0.02 #logged days earlier from 3 to 4
+origindiff = 0.9
 stratdiff = 0.01 
 
 # Generating fake data without interactions first
@@ -55,21 +55,21 @@ stratdiff = 0.01
 ######## SD for each treatment
 tempdiff.sd = 0.014
 origindiff.sd = 0.4
-stratdiff.sd = .005
+stratdiff.sd = 0.005
 
 
 ### Original with interactions below
 # interactions. 9 two-way interactions
 temporigin1 = -0.07
-temporigin2=-0.02
-temporigin3=-0.09
+temporigin2= -0.02
+temporigin3= -0.09
 tempstrat1 = -0.002
 tempstrat2=-0.001
 tempstrat3=-0.0025
 originstrat = -0.022 # 
 origintempstrat1 = 0.005
-origintempstrat2=0.001
-origintempstrat3=0.005
+origintempstrat2 = 0.001
+origintempstrat3 = 0.005
 
 
 # interactions. 9 two-way interactions
