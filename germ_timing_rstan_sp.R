@@ -13,9 +13,11 @@ if(length(grep("Lizzie", getwd())>0)) {
 library(rstan)
 library(shinystan)
 library(ggplot2)
+library(rstanarm)
+
 
 ## What do you want to do? 
-runstan=FALSE      # set to true if running the stan model 
+runstan=TRUE      # set to true if running the stan model 
 realdata=FALSE    # set to true to run on real data 
 
 if (realdata==TRUE) {
@@ -48,7 +50,7 @@ if (realdata==TRUE) {
                                           ifelse(sp_alph=="RUMCRI", 6, 7))))))
   nsp <- length(unique(data$sp))
   #putting all the data together: 
-  datax <- list(N=N, log_y=log_y, temp1=temp1, temp2=temp2, temp3=temp3 origin=origin, strat=strat,  nsp=nsp, sp=sp)
+  datax <- list(N=N, log_y=log_y, temp1=temp1, temp2=temp2, temp3=temp3 ,origin=origin, strat=strat,  nsp=nsp, sp=sp)
   #,nloc=nloc, nfamily=nfamily, loc=loc, family=family)
 }
 
@@ -58,22 +60,46 @@ if (runstan==TRUE) {
   if (realdata==TRUE) {germdata=datax
   } else 
   {load("Fake_germdata.RData")
-    germdata<-list(log_y=fake$log_y, temp=as.numeric(fake$temp), origin=as.numeric(fake$origin),
+    germdata<-list(log_y=fake$log_y, temp1=as.numeric(fake$temp1),temp2=as.numeric(fake$temp2), 
+                   temp3=as.numeric(fake$temp3), origin=as.numeric(fake$origin),
                    strat=as.numeric(fake$strat), N=nrow(fake), sp=as.numeric(fake$sp), nsp=length(unique(fake$sp)))}
-  
-  fit_sp <- stan(file = "germdate_sp.stan", data=germdata, chains=4, iter=2000) #This model yields 915 divergent transitions -- all below the diag in the paris plot 
-
-     #For 20000 iter, with 12000 warmup, thin=2, ad=.99, get 273 divergent transisions in fake, 915 for real.  
-  
-  #save(fit_sp, file="germdate_sp_fake.99_long.Rdata")
+    ##using rstanarm:
+    # fitting  random intercept:
+   mod_spint<-stan_lmer(log_y ~ origin*strat*temp1*temp2*temp3  + 
+                    (1|sp),
+               data=germdata, algorithm= "sampling", prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5))
+                  # by default, creates four chains with 1000 warmup, and 1000 samling 
+   
+   #now adding random slopes
+   
+   mod_rs<-stan_lmer(log_y ~ origin*strat*temp1*temp2*temp3  + 
+                    (1|sp) + (origin -1|sp) + (strat -1|sp) + (origin-1|sp) + (temp1-1|sp) + (temp2-1|sp) + (temp3-1|sp),
+                    data=germdata, algorithm= "sampling", prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5))
 }
+#                   (throws an error: 
+#                                Error in new_CppObject_xp(fields$.module, fields$.pointer, ...) : 
+#                                Exception thrown at line -1: []: accessing element out of range. index 39901 out of range; expecting index to be between 1 and 39900; index position = 1v
+#                                failed to create the sampler; sampling not done
+#                                Error in check_stanfit(stanfit) : 
+#                                Invalid stanfit object produced please report bug
+    
 
-##pair plots show divergent transitions BELOW the diag 
 
-pairs(fit_sp, pars=c("mu_b_temp", "mu_b_strat", "mu_b_origin"))
-pairs(fit_sp, pars=c("mu_b_inter_to","mu_b_inter_ts", "mu_b_inter_so", "mu_b_inter_tso"))
+    ## see the following for running in Stan proper 
+#     
+#   fit_sp <- stan(file = "germdate_sp.stan", data=germdata, chains=4, iter=2000) #This model yields 915 divergent transitions -- all below the diag in the paris plot 
+# 
+#      #For 20000 iter, with 12000 warmup, thin=2, ad=.99, get 273 divergent transisions in fake, 915 for real.  
+#   
+#   #save(fit_sp, file="germdate_sp_fake.99_long.Rdata")
+# }
+# 
+# ##pair plots show divergent transitions BELOW the diag 
+# 
+# pairs(fit_sp, pars=c("mu_b_temp", "mu_b_strat", "mu_b_origin"))
+# pairs(fit_sp, pars=c("mu_b_inter_to","mu_b_inter_ts", "mu_b_inter_so", "mu_b_inter_tso"))
 
 
 #----launching shiny stan---------
-my_sso <- launch_shinystan(fit_sp, rstudio = getOption("shinystan.rstudio"))
-
+my_sso <- launch_shinystan(mod, rstudio = getOption("shinystan.rstudio"))
+save(mod, file="germdate_spint_rstanarm.Rdata")
