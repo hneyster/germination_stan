@@ -15,7 +15,7 @@ library(shinystan)
 library(ggplot2)
 
 ## What do you want to do? 
-runstan=TRUE      # set to true if running the stan model 
+runstan=FALSE      # set to true if running the stan model 
 realdata=FALSE    # set to true to run on real data 
 
 if (realdata==TRUE) {
@@ -30,8 +30,11 @@ if (realdata==TRUE) {
   N<-nseed
   y<-data$daysfromstart    # dependent variable
   log_y=log(y)
-  temp<-data$temp         
-  strat<-data$strat
+  temp<-data$temp   
+  dx$chill1 = ifelse(dx$chill == 2, 1, 0)
+  dx$chill2 = ifelse(dx$chill == 3, 1, 0)
+  strat= data$strat
+  strat= ifelse(strat==30,1,2)
   dummy_variables <- model.matrix(~ origin, data = data) 
   origin<-dummy_variables[,2]
   intercept<-rep(1, nrow(data))

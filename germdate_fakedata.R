@@ -27,9 +27,10 @@ norigin = 2 # origin ==1 is Europe
 ntemp = 4
 nstrat = 2
 
-rep = 11 # only 1205/(2*2*4*7)=~11 seeds within each combination of treatments. 
+#rep = 11 # only 1205/(2*2*4*7)=~11 seeds within each combination of treatments. 
+rep = round((nind/(norigin*norigin*ntemp)), digits=0) # = 75
 
-(ntot = norigin*ntemp*nstrat*rep) # 1200 rows
+(ntot = norigin*ntemp*nstrat*rep) #  176 rows
 
 # Build up the data frame
 #loc = gl(nloc, rep, length = ntot) #random effect 
@@ -38,9 +39,13 @@ temp = gl(ntemp, rep, length = ntot)
 origin = gl(norigin, rep*ntemp, length = ntot)
 strat = gl(nstrat, rep*ntemp*norigin, length = ntot)
 
-treatcombo = paste(temp, origin, strat, sep = "_")
+temp1<-ifelse(temp == 2, 1, 0)
+temp2<-ifelse(temp == 3, 1, 0)
+temp3<-ifelse(temp == 4, 1, 0)
 
-(d <- data_frame(temp, origin, strat, treatcombo))
+treatcombo = paste(temp1, temp2, temp3, origin, strat, sep = "_")
+
+(d <- data_frame(temp1, temp2, temp3, origin, strat, treatcombo))
 
 ###### Set up differences for each level, for logged response 
 #locdiff = 0 
@@ -78,7 +83,10 @@ tempstrat.sd = 0.0003 #
 originstrat.sd = 0.0004 # 
 origintempstrat.sd = 0.001
 
-mm <- model.matrix(~(temp+origin+strat)^3, data.frame(temp, origin, strat))
+mm <- model.matrix(~(temp1+temp2+temp3+origin+strat)^3, data.frame(temp, origin, strat))
+mm<-mm[,-grep("temp1:temp2",colnames(mm))]
+mm<-mm[,-grep("temp1:temp3", colnames(mm))]
+mm<-mm[,-grep("temp2:temp3",colnames(mm))]
 colnames(mm)
 
 #  with individuals
@@ -99,10 +107,10 @@ for(i in 1:nsp){ # loop over species. i = 1
                rnorm(1, origindiff, origindiff.sd), 
                rnorm(1, stratdiff, stratdiff.sd),
                rnorm(1, temporigin1, temporigin.sd),
-               rnorm(1, temporigin2, temporigin.sd),
-               rnorm(1, temporigin3, temporigin.sd),
                rnorm(1, tempstrat1, tempstrat.sd),
+               rnorm(1, temporigin2, temporigin.sd),
                rnorm(1, tempstrat2, tempstrat.sd),
+               rnorm(1, temporigin3, temporigin.sd),
                rnorm(1, tempstrat3, tempstrat.sd),
                rnorm(1, originstrat, originstrat.sd),
                rnorm(1, origintempstrat1, origintempstrat.sd),
@@ -114,12 +122,12 @@ for(i in 1:nsp){ # loop over species. i = 1
     bb <- rnorm(n = length(temp), mean = mm %*% coeff, sd = 0.1)
     
     fakex <- data.frame(log_y=bb, sp = i,
-                        temp, origin, strat)
+                        temp1, temp2, temp3, origin, strat)
     
     fake <- rbind(fake, fakex)  
   }
 
-summary(lm(log_y ~ temp*origin*strat, data = fake)) # sanity check 
+summary(lm(log_y ~ temp1*temp2*temp3*origin*strat, data = fake)) # sanity check 
 
 # save(list=c("fake"), file = "Fake_germdate.RData")
 save(fake, file="Fake_germdata.RData")

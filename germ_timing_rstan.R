@@ -15,7 +15,7 @@ library(shinystan)
 library(ggplot2)
 
 ## What do you want to do? 
-runstan=TRUE # set to true if running the stan model 
+runstan=FALSE # set to true if running the stan model 
 realdata=FALSE # set to true to run on real data 
 
 
@@ -31,14 +31,15 @@ if (realdata==TRUE) {
   N<-nrow(data)
   K<-4
   y<-data$daysfromstart                    # dependent variable
-  temp<-data$temp   # independent variable 
-  strat<-data$strat
-  dummy_variables <- model.matrix(~ origin, data = data)
-  origin<-dummy_variables[,2]
-  covariates<-matrix(c(origin, temp, strat), nrow=N)                  #covariate matrix
+  temp1<-ifelse(data$temp==16.0, 1, 0) #coding temperature as binary dummy variables
+  temp2<-ifelse(data$temp==20.7, 1, 0) 
+  temp3<-ifelse(data$temp==25.3,1, 0) 
+  strat<-ifelse(data$strat==30,0,1) 
+  origin<-ifelse(data$origin=="Europe", 0, 1)
+  covariates<-matrix(c(origin, temp1, temp2, temp3, strat), nrow=N)                  #covariate matrix
   X = cbind(intercept=1, covariates) #covariates + intercept
   intercept<-rep(1, nrow(data))
-  datax<-list(N=N, K=K, log_y=log(y), temp=temp, origin=origin, strat=strat, intercept=intercept, X=X)
+  datax<-list(N=N, K=K, log_y=log(y), temp1=temp1, temp2=temp2, temp3=temp3, origin=origin, strat=strat, intercept=intercept, X=X)
 }
 
 ## fitting the stan model -------------------------------------------------
