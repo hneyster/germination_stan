@@ -3,7 +3,11 @@ rm(list=ls())
 options(stringsAsFactors = FALSE)
 options(shinystan.rstudio = TRUE)
 options(mc.cores = parallel::detectCores())
-setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
+
+if(length(grep("Lizzie", getwd())>0)) { 
+  setwd("~/Documents/git/projects/misc/undergrads/harold/analyses/germination_stan") 
+} else 
+  setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
 
 ##libraries
 library(rstan)
@@ -11,7 +15,7 @@ library(shinystan)
 library(ggplot2)
 
 ## What do you want to do? 
-runstan=TRUE      # set to true if running the stan model 
+runstan=FALSE      # set to true if running the stan model 
 realdata=FALSE    # set to true to run on real data 
 
 if (realdata==TRUE) {
@@ -25,11 +29,11 @@ if (realdata==TRUE) {
   nseed<-length(unique(data$uniqueid)) #1205 unique seeds
   N<-nseed
   y<-data$daysfromstart    # dependent variable
-  log_y=log(y)
-  temp<-data$temp         
-  strat<-data$strat
-  dummy_variables <- model.matrix(~ origin, data = data) 
-  origin<-dummy_variables[,2]
+  temp1<-ifelse(data$temp==16.0, 1, 0) #coding temperature as binary dummy variables
+  temp2<-ifelse(data$temp==20.7, 1, 0) 
+  temp3<-ifelse(data$temp==25.3,1, 0) 
+  strat<-ifelse(data$strat==30,0,1) 
+  origin<-ifelse(data$origin=="Europe", 0, 1)
   intercept<-rep(1, nrow(data))
   #setting up to random effects data:
   nsp<-length(unique(germs.y$sp))
@@ -43,7 +47,7 @@ if (realdata==TRUE) {
                                           ifelse(sp_alph=="RUMCRI", 6, 7))))))
   nsp<-length(unique(data$sp))
   #putting all the data together: 
-  datax<-list(N=N, log_y=log_y, temp=temp, origin=origin, strat=strat,  nsp=nsp, sp=sp)
+  datax<-list(N=N, log_y=log_y, temp1=temp1, temp2=temp2, temp3=temp3, origin=origin, strat=strat,  nsp=nsp, sp=sp)
   #,nloc=nloc, nfamily=nfamily, loc=loc, family=family)
 }
 

@@ -30,13 +30,11 @@ if (realdata==TRUE) {
   N<-nseed
   y<-data$daysfromstart    # dependent variable
   log_y=log(y)
-  temp<-data$temp   
-  dx$chill1 = ifelse(dx$chill == 2, 1, 0)
-  dx$chill2 = ifelse(dx$chill == 3, 1, 0)
-  strat= data$strat
-  strat= ifelse(strat==30,1,2)
-  dummy_variables <- model.matrix(~ origin, data = data) 
-  origin<-dummy_variables[,2]
+  temp1<-ifelse(data$temp==16.0, 1, 0) #coding temperature as binary dummy variables
+  temp2<-ifelse(data$temp==20.7, 1, 0) 
+  temp3<-ifelse(data$temp==25.3,1, 0) 
+  strat<-ifelse(data$strat==30,0,1) 
+  origin<-ifelse(data$origin=="Europe", 0, 1)
   intercept<-rep(1, nrow(data))
   #setting up to random effects data:
   nsp<-length(unique(germs.y$sp))
@@ -50,7 +48,7 @@ if (realdata==TRUE) {
                                           ifelse(sp_alph=="RUMCRI", 6, 7))))))
   nsp <- length(unique(data$sp))
   #putting all the data together: 
-  datax <- list(N=N, log_y=log_y, temp=temp, origin=origin, strat=strat,  nsp=nsp, sp=sp)
+  datax <- list(N=N, log_y=log_y, temp1=temp1, temp2=temp2, temp3=temp3 origin=origin, strat=strat,  nsp=nsp, sp=sp)
   #,nloc=nloc, nfamily=nfamily, loc=loc, family=family)
 }
 
