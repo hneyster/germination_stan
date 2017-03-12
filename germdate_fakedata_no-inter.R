@@ -1,6 +1,6 @@
 # Fake data for germination date 
 # modified from Dan Flynn's "FakeBudburst_Generate_ind.R" file 
-rm(list=ls())
+
 # <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <> <>
 # Set up: same as experiment, with two continents, 7 species, two levels of stratification length,  two levels of origin, 
 #   and four levels of temperature. Also has interactions and four interactions. 
@@ -91,14 +91,6 @@ colnames(mm)
 baseinter = 2.48 # baseline intercept across all species 
 spint <- baseinter + (c(1:nsp)-mean(1:nsp))/2 # different intercepts by species. 7 species
 
-#setting up random slopes: 
-#setting up random slopes -- not sure I"m doing this right 
-sptempdiff1 = seq(-0.005, 0.005, length.out=nsp)
-sptempdiff2 = seq(-0.005, 0.005, length.out=nsp)
-sptempdiff3 = seq(-0.005, 0.005, length.out=nsp)
-sporigindiff =seq(-.6, .6, length.out=nsp) 
-spstratdiff = seq(-.01, 0.01, length.out=nsp)
-
 fake <- vector()
 
 for(i in 1:nsp){ # loop over species. i = 1
@@ -106,11 +98,11 @@ for(i in 1:nsp){ # loop over species. i = 1
   # Give species different difference values, drawn from normal.
   
   coeff <- c(spint[i], 
-             rnorm(1, tempdiff1, tempdiff.sd) +sptempdiff1[i],
-             rnorm(1, tempdiff2, tempdiff.sd) + sptempdiff2[i],
-             rnorm(1, tempdiff3, tempdiff.sd) + sptempdiff3[i],
-             rnorm(1, origindiff, origindiff.sd) + sporigindiff[i], 
-             rnorm(1, stratdiff, stratdiff.sd) + spstratdiff[i]
+             rnorm(1, tempdiff1, tempdiff.sd),
+             rnorm(1, tempdiff2, tempdiff.sd),
+             rnorm(1, tempdiff3, tempdiff.sd),
+             rnorm(1, origindiff, origindiff.sd), 
+             rnorm(1, stratdiff, stratdiff.sd)
              )
              
   

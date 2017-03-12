@@ -91,27 +91,8 @@ colnames(mm)
 
 #  with individuals
 
-#setting up random interecpt:
 baseinter = 2.48 # baseline intercept across all species 
 spint <- baseinter + (c(1:nsp)-mean(1:nsp))/2 # different intercepts by species. 7 species
-
-#setting up random slopes -- not sure I"m doing this right 
-sptempdiff1 = seq(-0.005, 0.005, length.out=nsp)
-sptempdiff2 = seq(-0.005, 0.005, length.out=nsp)
-sptempdiff3 = seq(-0.005, 0.005, length.out=nsp)
-sporigindiff =seq(-.6, .6, length.out=nsp) 
-spstratdiff = seq(-.01, 0.01, length.out=nsp)
-sptemporigin1 = seq(-.005, .005, length.out=nsp)
-sptemporigin2 = seq(-.005, .005, length.out=nsp)
-sptemporigin3 = seq(-.005, .005, length.out=nsp)
-sptempstrat1 = seq(-.00003, .00003, length.out = nsp)
-sptempstrat2 = seq(-.00003, .00003, length.out = nsp)
-sptempstrat3 = seq(-.00003, .00003, length.out = nsp)
-sporiginstrat = seq(-.005, .005, length.out = nsp)
-sporigintempstrat1 = seq(-.0001, .0001, length.out = nsp)
-sporigintempstrat2 =  seq(-.0001, .0001, length.out = nsp)
-sporigintempstrat3 =  seq(-.0001, .0001, length.out = nsp)
-
 
 fake <- vector()
 
@@ -120,21 +101,21 @@ for(i in 1:nsp){ # loop over species. i = 1
   # Give species different difference values, drawn from normal.
     
     coeff <- c(spint[i], 
-               rnorm(1, tempdiff1, tempdiff.sd) +sptempdiff1[i],
-               rnorm(1, tempdiff2, tempdiff.sd)+ sptempdiff2[i],
-               rnorm(1, tempdiff3, tempdiff.sd) + sptempdiff3[i],
-               rnorm(1, origindiff, origindiff.sd) + sporigindiff[i],
-               rnorm(1, stratdiff, stratdiff.sd) + spstratdiff[i],
-               rnorm(1, temporigin1, temporigin.sd) + sptemporigin1[i],
-               rnorm(1, tempstrat1, tempstrat.sd) + sptempstrat1[i], 
-               rnorm(1, temporigin2, temporigin.sd) + sptemporigin2[i],
-               rnorm(1, tempstrat2, tempstrat.sd) + sptempstrat2[i],
-               rnorm(1, temporigin3, temporigin.sd) + sptemporigin3[i],
-               rnorm(1, tempstrat3, tempstrat.sd) + sptempstrat3[i],
-               rnorm(1, originstrat, originstrat.sd) + sporiginstrat[i],
-               rnorm(1, origintempstrat1, origintempstrat.sd) + sporigintempstrat1[i],
-               rnorm(1, origintempstrat2, origintempstrat.sd) + sporigintempstrat2[i],
-               rnorm(1, origintempstrat3, origintempstrat.sd) + sporigintempstrat3[i]
+               rnorm(1, tempdiff1, tempdiff.sd),
+               rnorm(1, tempdiff2, tempdiff.sd),
+               rnorm(1, tempdiff3, tempdiff.sd),
+               rnorm(1, origindiff, origindiff.sd), 
+               rnorm(1, stratdiff, stratdiff.sd),
+               rnorm(1, temporigin1, temporigin.sd),
+               rnorm(1, tempstrat1, tempstrat.sd),
+               rnorm(1, temporigin2, temporigin.sd),
+               rnorm(1, tempstrat2, tempstrat.sd),
+               rnorm(1, temporigin3, temporigin.sd),
+               rnorm(1, tempstrat3, tempstrat.sd),
+               rnorm(1, originstrat, originstrat.sd),
+               rnorm(1, origintempstrat1, origintempstrat.sd),
+               rnorm(1, origintempstrat2, origintempstrat.sd),
+               rnorm(1, origintempstrat3, origintempstrat.sd)
           
   )
     
