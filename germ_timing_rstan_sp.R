@@ -65,11 +65,14 @@ if (runstan==TRUE) {
                    strat=as.numeric(fake$strat), N=nrow(fake), sp=as.numeric(fake$sp), nsp=length(unique(fake$sp)))}
     ##using rstanarm:
     # fitting  random intercept:
-   mod_spint<-stan_lmer(log_y ~ origin*strat*temp1*temp2*temp3  + 
-                    (1|sp),
-               data=germdata, algorithm= "sampling", prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5))
-                  # by default, creates four chains with 1000 warmup, and 1000 samling 
-   
+    mod_spint<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 +
+       origin*strat + origin*temp1 + origin*temp2 + origin*temp3 +
+       strat*temp1 + strat*temp2 + strat*temp3 +
+       origin*strat*temp1 +  origin*strat*temp2 + origin*strat*temp3 + (1|sp), 
+       data=germdata, algorithm= "sampling",
+       prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5)) # by default, creates four chains with 1000 warmup, and 1000 samling 
+       # note to Lizzie: Tried: prior=normal(0,30), prior_intercept=normal(0,30), prior_aux=cauchy(0,15) but no change in output
+  
    #now adding random slopes
    
    mod_rs<-stan_lmer(log_y ~ origin*strat*temp1*temp2*temp3  + 

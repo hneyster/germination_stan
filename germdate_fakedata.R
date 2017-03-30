@@ -127,7 +127,13 @@ for(i in 1:nsp){ # loop over species. i = 1
     fake <- rbind(fake, fakex)  
   }
 
-summary(lm(log_y ~ temp1*temp2*temp3*origin*strat, data = fake)) # sanity check 
+summary(lm(log_y ~ 
+    origin + strat + temp1 + temp2 + temp3 +
+    origin*strat + origin*temp1 + origin*temp2 + origin*temp3 +
+    strat*temp1 + strat*temp2 + strat*temp3 +
+    origin*strat*temp1 +  origin*strat*temp2 + origin*strat*temp3 +
+    (1|sp), data = fake)) 
+
 
 # save(list=c("fake"), file = "Fake_germdate.RData")
 save(fake, file="Fake_germdata.RData")
