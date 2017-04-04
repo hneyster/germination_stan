@@ -27,8 +27,7 @@ norigin = 2 # origin ==1 is Europe
 ntemp = 4
 nstrat = 2
 
-#rep = 11 # only 1205/(2*2*4*7)=~11 seeds within each combination of treatments. 
-rep = round((nind/(norigin*norigin*ntemp)), digits=0) # = 75
+rep = round((nind/(norigin*norigin*ntemp*nsp)), digits=0) # = 11
 
 (ntot = norigin*ntemp*nstrat*rep) #  176 rows
 
@@ -36,8 +35,8 @@ rep = round((nind/(norigin*norigin*ntemp)), digits=0) # = 75
 #loc = gl(nloc, rep, length = ntot) #random effect 
 
 temp = gl(ntemp, rep, length = ntot)
-origin = gl(norigin, rep*ntemp, length = ntot)
-strat = gl(nstrat, rep*ntemp*norigin, length = ntot)
+origin = as.numeric(as.character(gl(norigin, rep*ntemp, length = ntot, labels=c(0,1))))
+strat = as.numeric(as.character(gl(nstrat, rep*ntemp*norigin, length = ntot, c(0,1))))
 
 temp1<-ifelse(temp == 2, 1, 0)
 temp2<-ifelse(temp == 3, 1, 0)
@@ -95,11 +94,13 @@ baseinter = 2.48 # baseline intercept across all species
 spint <- baseinter + (c(1:nsp)-mean(1:nsp))/2 # different intercepts by species. 7 species
 
 fake <- vector()
+cc<- data_frame()
+
+set.seed(100) #so that the created random coefficients can be compared to modeled coefficients 
 
 for(i in 1:nsp){ # loop over species. i = 1
   
   # Give species different difference values, drawn from normal.
-    
     coeff <- c(spint[i], 
                rnorm(1, tempdiff1, tempdiff.sd),
                rnorm(1, tempdiff2, tempdiff.sd),
@@ -124,8 +125,9 @@ for(i in 1:nsp){ # loop over species. i = 1
     fakex <- data.frame(log_y=bb, sp = i,
                         temp1, temp2, temp3, origin, strat)
     
-    fake <- rbind(fake, fakex)  
-  }
+    fake <- rbind(fake, fakex) 
+    cc<-rbind(cc, coeff) #to track randomly generated coefficients 
+  } 
 
 summary(lm(log_y ~ 
     origin + strat + temp1 + temp2 + temp3 +

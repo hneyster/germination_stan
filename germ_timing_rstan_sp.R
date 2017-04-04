@@ -62,7 +62,8 @@ if (runstan==TRUE) {
   {load("Fake_germdata.RData")
     germdata<-list(log_y=fake$log_y, temp1=as.numeric(fake$temp1),temp2=as.numeric(fake$temp2), 
                    temp3=as.numeric(fake$temp3), origin=as.numeric(fake$origin),
-                   strat=as.numeric(fake$strat), N=nrow(fake), sp=as.numeric(fake$sp), nsp=length(unique(fake$sp)))}
+                   strat=as.numeric(fake$strat), N=nrow(fake),sp=as.numeric(fake$sp),
+                   nsp=length(unique(fake$sp)))}
     ##using rstanarm:
     # fitting  random intercept:
     mod_spint<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 +
@@ -75,17 +76,22 @@ if (runstan==TRUE) {
   
    #now adding random slopes
    
-   mod_rs<-stan_lmer(log_y ~ origin*strat*temp1*temp2*temp3  + 
-                    (1|sp) + (origin -1|sp) + (strat -1|sp) + (origin-1|sp) + (temp1-1|sp) + (temp2-1|sp) + (temp3-1|sp),
-                    data=germdata, algorithm= "sampling", prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5))
+   mod_rs<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
+                       origin*strat + origin*temp1 + origin*temp2 + origin*temp3 + 
+                       strat*temp1 + strat*temp2 + strat*temp3 +
+                       origin*strat*temp1 +  origin*strat*temp2 + origin*strat*temp3 + 
+                       (1|sp) +
+                        (origin -1|sp) + (strat -1|sp) + (temp1 -1|sp) + (temp2 -1|sp) +  (temp3 -1|sp),
+                    data=germdata, algorithm= "sampling",
+                    prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5))
+  
+   #receive error: 
+   # Error in new_CppObject_xp(fields$.module, fields$.pointer, ...) : 
+   #   Exception thrown at line -1: []: accessing element out of range. index 3389 out of range; expecting index to be between 1 and 3388; index position = 1v
+   # failed to create the sampler; sampling not done
+   # Error in check_stanfit(stanfit) : 
+   #   Invalid stanfit object produced please report bug
 }
-#                   (throws an error: 
-#                                Error in new_CppObject_xp(fields$.module, fields$.pointer, ...) : 
-#                                Exception thrown at line -1: []: accessing element out of range. index 39901 out of range; expecting index to be between 1 and 39900; index position = 1v
-#                                failed to create the sampler; sampling not done
-#                                Error in check_stanfit(stanfit) : 
-#                                Invalid stanfit object produced please report bug
-    
 
 
     ## see the following for running in Stan proper 
@@ -104,5 +110,5 @@ if (runstan==TRUE) {
 
 
 #----launching shiny stan---------
-my_sso <- launch_shinystan(mod, rstudio = getOption("shinystan.rstudio"))
-save(mod, file="germdate_spint_rstanarm.Rdata")
+my_sso <- launch_shinystan(mod_spint, rstudio = getOption("shinystan.rstudio"))
+#save(mod_spint, file="germdate_spint_rstanarm_4-3-17.Rdata")
