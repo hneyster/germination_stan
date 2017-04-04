@@ -111,4 +111,4 @@ if (runstan==TRUE) {
 
 #----launching shiny stan---------
 my_sso <- launch_shinystan(mod_spint, rstudio = getOption("shinystan.rstudio"))
-#save(mod_spint, file="germdate_spint_rstanarm_4-3-17.Rdata")
+#save(mod_spint, file="germdate_spint_rstanarm_4-4-17.Rdata")
