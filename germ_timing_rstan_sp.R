@@ -14,11 +14,16 @@ library(rstan)
 library(shinystan)
 library(ggplot2)
 library(rstanarm)
+## to download the dev version of rstanarm: 
+#install.packages("devtools")
+#library(devtools)
+#devtools::install_github("stan-dev/rstanarm", args = "--preclean", build_vignettes = FALSE)
+
 
 
 ## What do you want to do? 
 runstan=TRUE      # set to true if running the stan model 
-realdata=FALSE    # set to true to run on real data 
+realdata=TRUE    # set to true to run on real data 
 
 if (realdata==TRUE) {
   # Setting up the  real data  for the Stan model-----------------
@@ -48,9 +53,11 @@ if (realdata==TRUE) {
                             ifelse(sp_alph=="PLALAN", 4,
                                    ifelse(sp_alph=="PLAMAJ", 5, 
                                           ifelse(sp_alph=="RUMCRI", 6, 7))))))
+  loc<-as.numeric(as.factor(data$loc))
+  uniqind<-as.numeric(as.factor(data$uniqind))
   nsp <- length(unique(data$sp))
   #putting all the data together: 
-  datax <- list(N=N, log_y=log_y, temp1=temp1, temp2=temp2, temp3=temp3 ,origin=origin, strat=strat,  nsp=nsp, sp=sp)
+  datax <- data.frame(N=N, log_y=log_y, y, temp1=temp1, temp2=temp2, temp3=temp3 ,origin=origin, strat=strat,  nsp=nsp, sp=sp)
   #,nloc=nloc, nfamily=nfamily, loc=loc, family=family)
 }
 
@@ -60,7 +67,7 @@ if (runstan==TRUE) {
   if (realdata==TRUE) {germdata=datax
   } else 
   {load("Fake_germdata.RData")
-    germdata<-list(log_y=fake$log_y, temp1=as.numeric(fake$temp1),temp2=as.numeric(fake$temp2), 
+    germdata<-data.frame(log_y=fake$log_y, temp1=as.numeric(fake$temp1),temp2=as.numeric(fake$temp2), 
                    temp3=as.numeric(fake$temp3), origin=as.numeric(fake$origin),
                    strat=as.numeric(fake$strat), N=nrow(fake),sp=as.numeric(fake$sp),
                    nsp=length(unique(fake$sp)))}
@@ -83,7 +90,15 @@ if (runstan==TRUE) {
                        (1|sp) +
                         (origin -1|sp) + (strat -1|sp) + (temp1 -1|sp) + (temp2 -1|sp) +  (temp3 -1|sp),
                     data=germdata, algorithm= "sampling",
-                    prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5))
+                    prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=1000)
+   
+   mod_rs_freq<-lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
+                       origin*strat + origin*temp1 + origin*temp2 + origin*temp3 + 
+                       strat*temp1 + strat*temp2 + strat*temp3 +
+                       origin*strat*temp1 +  origin*strat*temp2 + origin*strat*temp3 + 
+                       (1|sp) +
+                       (origin -1|sp) + (strat -1|sp) + (temp1 -1|sp) + (temp2 -1|sp) +  (temp3 -1|sp),
+                     data=germdata)
   
    #receive error: 
    # Error in new_CppObject_xp(fields$.module, fields$.pointer, ...) : 
@@ -108,7 +123,20 @@ if (runstan==TRUE) {
 # pairs(fit_sp, pars=c("mu_b_temp", "mu_b_strat", "mu_b_origin"))
 # pairs(fit_sp, pars=c("mu_b_inter_to","mu_b_inter_ts", "mu_b_inter_so", "mu_b_inter_tso"))
 
-
 #----launching shiny stan---------
-my_sso <- launch_shinystan(mod_spint, rstudio = getOption("shinystan.rstudio"))
-#save(mod_spint, file="germdate_spint_rstanarm_4-4-17.Rdata")
+my_sso <- launch_shinystan(mod_rs_log, rstudio = getOption("shinystan.rstudio"))
+save(mod_rs_log, file="germdate_rs_rstanarm_logged.Rdata")
+mod_rs_log<-mod_rs
+load("germdate_rs_rstanarm_no-log.Rdata")
+
+#some model checking:
+
+#jpeg(filename = "qqnorm_germdate.jpeg", height=10.5, width=8, units="in", res=500)
+par(mfrow=c(2,1))
+#qqnorm(resid(mod_rs_freq), main="frequentist logged")
+#qqline(resid(mod_rs_freq))
+qqnorm(resid(mod_rs), main= "no-log")
+qqline(resid(mod_rs))
+qqnorm(resid(mod_rs_log), main= "logged")
+qqline(resid(mod_rs_log))
+#dev.off()
