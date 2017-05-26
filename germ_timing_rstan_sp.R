@@ -12,8 +12,12 @@ if(length(grep("Lizzie", getwd())>0)) {
 ##libraries
 library(rstan)
 library(shinystan)
+library(lme4)
 library(ggplot2)
 library(rstanarm)
+
+source("http://peterhaschke.com/Code/multiplot.R")
+
 ## to download the dev version of rstanarm: 
 #install.packages("devtools")
 #library(devtools)
@@ -22,7 +26,7 @@ library(rstanarm)
 
 
 ## What do you want to do? 
-runstan=TRUE      # set to true if running the stan model 
+runstan=FALSE      # set to true if running the stan model 
 realdata=TRUE    # set to true to run on real data 
 
 if (realdata==TRUE) {
@@ -54,10 +58,11 @@ if (realdata==TRUE) {
                                    ifelse(sp_alph=="PLAMAJ", 5, 
                                           ifelse(sp_alph=="RUMCRI", 6, 7))))))
   loc<-as.numeric(as.factor(data$loc))
-  uniqind<-as.numeric(as.factor(data$uniqind))
+  sfamily<-as.numeric(as.factor(data$uniqind))
   nsp <- length(unique(data$sp))
   #putting all the data together: 
-  datax <- data.frame(N=N, log_y=log_y, y, temp1=temp1, temp2=temp2, temp3=temp3 ,origin=origin, strat=strat,  nsp=nsp, sp=sp)
+  datax <- data.frame(N=N, log_y=log_y, y, temp1=temp1, temp2=temp2, temp3=temp3 ,origin=origin, strat=strat,  
+                      nsp=nsp, sp=sp, loc=loc, sfamily=sfamily)
   #,nloc=nloc, nfamily=nfamily, loc=loc, family=family)
 }
 
@@ -83,51 +88,71 @@ if (runstan==TRUE) {
   
    #now adding random slopes
    
-   mod_rs<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
-                       origin*strat + origin*temp1 + origin*temp2 + origin*temp3 + 
-                       strat*temp1 + strat*temp2 + strat*temp3 +
-                       origin*strat*temp1 +  origin*strat*temp2 + origin*strat*temp3 + 
-                       (1|sp) +
-                        (origin -1|sp) + (strat -1|sp) + (temp1 -1|sp) + (temp2 -1|sp) +  (temp3 -1|sp),
-                    data=germdata, algorithm= "sampling",
-                    prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=1000)
+   mod_time_log<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
+                            origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
+                            strat:temp1 + strat:temp2 + strat:temp3 +
+                            origin:strat:temp1 +  origin:strat:temp2 + origin:strat:temp3 + 
+                            (1|sp/loc/sfamily) +
+                            (origin -1|sp/loc/sfamily) + (strat -1|sp/loc/sfamily) + (temp1 -1|sp/loc/sfamily) + 
+                            (temp2 -1|sp/loc/sfamily) +  (temp3 -1|sp/loc/sfamily)+
+                              (origin:strat -1|sp/loc/sfamily) + (origin:temp1 -1|sp/loc/sfamily) + (origin:temp2 -1|sp/loc/sfamily) + 
+                              (origin:temp3 -1|sp/loc/sfamily) +  (strat:temp1 -1|sp/loc/sfamily) + (strat:temp2 -1|sp/loc/sfamily) + 
+                              (strat:temp3 -1|sp/loc/sfamily) + (origin:strat:temp1 -1|sp/loc/sfamily) + 
+                              (origin:strat:temp2 -1|sp/loc/sfamily) + (origin:strat:temp3 -1|sp/loc/sfamily),
+                          data=germdata, algorithm= "sampling",
+                    prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=2000)
    
-   mod_rs_freq<-lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
-                       origin*strat + origin*temp1 + origin*temp2 + origin*temp3 + 
-                       strat*temp1 + strat*temp2 + strat*temp3 +
-                       origin*strat*temp1 +  origin*strat*temp2 + origin*strat*temp3 + 
-                       (1|sp) +
-                       (origin -1|sp) + (strat -1|sp) + (temp1 -1|sp) + (temp2 -1|sp) +  (temp3 -1|sp),
-                     data=germdata)
-  
-   #receive error: 
-   # Error in new_CppObject_xp(fields$.module, fields$.pointer, ...) : 
-   #   Exception thrown at line -1: []: accessing element out of range. index 3389 out of range; expecting index to be between 1 and 3388; index position = 1v
-   # failed to create the sampler; sampling not done
-   # Error in check_stanfit(stanfit) : 
-   #   Invalid stanfit object produced please report bug
+  #and checking against lmer model:
+   mod_rs_freq2<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
+                       origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
+                       strat:temp1 + strat:temp2 + strat:temp3 +
+                       origin:strat:temp1 +  origin:strat:temp2 + origin:strat:temp3 + 
+                       (1|sp/loc/sfamily) +
+                       (origin -1|sp/loc/sfamily) + (strat -1|sp/loc/sfamily) + (temp1 -1|sp/loc/sfamily) + 
+                       (temp2 -1|sp/loc/sfamily) +  (temp3 -1|sp/loc/sfamily),
+                      data=germdata, algorithm= "sampling",
+                      prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=1, iter=500)
+
+   save(mod_time_log, "mod_time_log.Rdata")
 }
 
-
-    ## see the following for running in Stan proper 
-#     
-#   fit_sp <- stan(file = "germdate_sp.stan", data=germdata, chains=4, iter=2000) #This model yields 915 divergent transitions -- all below the diag in the paris plot 
-# 
-#      #For 20000 iter, with 12000 warmup, thin=2, ad=.99, get 273 divergent transisions in fake, 915 for real.  
-#   
-#   #save(fit_sp, file="germdate_sp_fake.99_long.Rdata")
-# }
-# 
-# ##pair plots show divergent transitions BELOW the diag 
-# 
-# pairs(fit_sp, pars=c("mu_b_temp", "mu_b_strat", "mu_b_origin"))
-# pairs(fit_sp, pars=c("mu_b_inter_to","mu_b_inter_ts", "mu_b_inter_so", "mu_b_inter_tso"))
-
 #----launching shiny stan---------
-my_sso <- launch_shinystan(mod_rs_log, rstudio = getOption("shinystan.rstudio"))
-save(mod_rs_log, file="germdate_rs_rstanarm_logged.Rdata")
-mod_rs_log<-mod_rs
-load("germdate_rs_rstanarm_no-log.Rdata")
+load("mod_time_log.Rdata")
+my_sso <- launch_shinystan(q2, rstudio = getOption("shinystan.rstudio"))
+
+# plotting: 
+
+p1<-plot(mod_time_log, pars=c("origin", "strat", "temp1", "temp2", "temp3", "origin:strat", "origin:temp1", "origin:temp2",
+                          "origin:temp3", "strat:temp1", "strat:temp2", "strat:temp3", "origin:strat:temp1", "origin:strat:temp2", "origin:strat:temp3"))
+
+p2<-plot(mod_time_log, pars=c("b[origin sp:1]", "b[strat sp:1]", "b[temp1 sp:1]", "b[temp2 sp:1]", "b[temp3 sp:1]", "b[origin:strat sp:1]",
+                          "b[origin:temp1 sp:1]", "b[origin:temp2 sp:1]", "b[origin:temp3 sp:1]", "b[strat:temp1 sp:1]", "b[strat:temp2 sp:1]", "b[strat:temp3 sp:1]", "b[origin:strat:temp1 sp:1]",
+                          "b[origin:strat:temp2 sp:1]", "b[origin:strat:temp3 sp:1]"))
+
+p3<-plot(mod_time_log, pars=c("b[origin sp:2]", "b[strat sp:2]", "b[temp1 sp:2]", "b[temp2 sp:2]", "b[temp3 sp:2]", "b[origin:strat sp:2]",
+                          "b[origin:temp1 sp:2]", "b[origin:temp2 sp:2]", "b[origin:temp3 sp:2]","b[strat:temp1 sp:2]", "b[strat:temp2 sp:2]", "b[strat:temp3 sp:2]", "b[origin:strat:temp1 sp:2]", 
+                          "b[origin:strat:temp2 sp:2]", "b[origin:strat:temp3 sp:2]"))
+
+p4<-plot(mod_time_log, pars=c("b[origin sp:3]", "b[strat sp:3]", "b[temp1 sp:3]", "b[temp2 sp:3]", "b[temp3 sp:3]", "b[origin:strat sp:3]",
+                          "b[origin:temp1 sp:3]", "b[origin:temp2 sp:3]",  "b[origin:temp3 sp:3]", "b[strat:temp1 sp:3]", "b[strat:temp2 sp:3]", "b[strat:temp3 sp:3]", "b[origin:strat:temp1 sp:3]",
+                          "b[origin:strat:temp2 sp:3]", "b[origin:strat:temp3 sp:3]"))
+
+p5<-plot(mod_time_log, pars=c("b[origin sp:4]", "b[strat sp:4]", "b[temp1 sp:4]", "b[temp2 sp:4]", "b[temp3 sp:4]", "b[origin:strat sp:4]",
+                          "b[origin:temp1 sp:4]", "b[origin:temp2 sp:4]",  "b[origin:temp3 sp:4]", "b[strat:temp1 sp:4]", "b[strat:temp2 sp:4]", "b[strat:temp3 sp:4]", "b[origin:strat:temp1 sp:4]",
+                          "b[origin:strat:temp2 sp:4]", "b[origin:strat:temp3 sp:4]"))
+
+p6<-plot(mod_time_log, pars=c("b[origin sp:5]", "b[strat sp:5]", "b[temp1 sp:5]", "b[temp2 sp:5]", "b[temp3 sp:5]", "b[origin:strat sp:5]",
+                          "b[origin:temp1 sp:5]", "b[origin:temp2 sp:5]",  "b[origin:temp3 sp:5]", "b[strat:temp1 sp:5]", "b[strat:temp2 sp:5]", "b[strat:temp3 sp:5]", "b[origin:strat:temp1 sp:5]",
+                          "b[origin:strat:temp2 sp:5]", "b[origin:strat:temp3 sp:5]"))
+
+p7<-plot(mod_time_log, pars=c("b[origin sp:6]", "b[strat sp:6]", "b[temp1 sp:6]", "b[temp2 sp:6]", "b[temp3 sp:6]", "b[origin:strat sp:6]",
+                          "b[origin:temp1 sp:6]", "b[origin:temp2 sp:6]",  "b[origin:temp3 sp:6]","b[strat:temp1 sp:6]", "b[strat:temp2 sp:6]", "b[strat:temp3 sp:6]", "b[origin:strat:temp1 sp:6]",
+                          "b[origin:strat:temp2 sp:6]", "b[origin:strat:temp3 sp:6]"))
+
+pdf("timing_logged_rsi.pdf", width=20, height=11)
+multiplot(p1,p2, p3, p4, p5, p6, p7, cols=4)
+dev.off()
+
 
 #some model checking:
 
@@ -135,8 +160,8 @@ load("germdate_rs_rstanarm_no-log.Rdata")
 par(mfrow=c(2,1))
 #qqnorm(resid(mod_rs_freq), main="frequentist logged")
 #qqline(resid(mod_rs_freq))
-qqnorm(resid(mod_rs), main= "no-log")
-qqline(resid(mod_rs))
-qqnorm(resid(mod_rs_log), main= "logged")
-qqline(resid(mod_rs_log))
+qqnorm(resid(mod_time), main= "no-log")
+qqline(resid(mod_time))
+qqnorm(resid(mod_time_log), main= "logged")
+qqline(resid(mod_time_log))
 #dev.off()
