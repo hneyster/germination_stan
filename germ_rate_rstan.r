@@ -141,7 +141,7 @@ if (runstan==TRUE) {
   p7<-plot(mod_rate, pars=c("b[origin sp:6]", "b[strat sp:6]", "b[temp1 sp:6]", "b[temp2 sp:6]", "b[temp3 sp:6]", "b[origin:strat sp:6]",
                                 "b[origin:temp1 sp:6]", "b[origin:temp2 sp:6]",  "b[origin:temp3 sp:6]","b[strat:temp1 sp:6]", "b[strat:temp2 sp:6]", "b[strat:temp3 sp:6]", "b[origin:strat:temp1 sp:6]",
                                 "b[origin:strat:temp2 sp:6]", "b[origin:strat:temp3 sp:6]"))
- # pdf("germ_rate.pdf", width=20, height=7)
+ # pdf("germ_rate.pdf", width=20, height=11)
  multiplot(p1,p2, p3, p4, p5, p6, p7, cols=4)
 #  dev.off()
 

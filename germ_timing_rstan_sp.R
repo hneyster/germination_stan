@@ -26,7 +26,7 @@ source("http://peterhaschke.com/Code/multiplot.R")
 
 
 ## What do you want to do? 
-runstan=FALSE      # set to true if running the stan model 
+runstan=TRUE      # set to true if running the stan model 
 realdata=TRUE    # set to true to run on real data 
 
 if (realdata==TRUE) {
@@ -69,16 +69,21 @@ if (realdata==TRUE) {
 ## fitting the stan model -------------------------------------------------
 
 if (runstan==TRUE) {
-  if (realdata==TRUE) {germdata=datax
+  if (realdata==TRUE) {
+    
+    germdata=datax
+    
   } else 
   {load("Fake_germdata.RData")
     germdata<-data.frame(log_y=fake$log_y, temp1=as.numeric(fake$temp1),temp2=as.numeric(fake$temp2), 
                    temp3=as.numeric(fake$temp3), origin=as.numeric(fake$origin),
                    strat=as.numeric(fake$strat), N=nrow(fake),sp=as.numeric(fake$sp),
                    nsp=length(unique(fake$sp)))}
-    ##using rstanarm:
-    # fitting  random intercept:
-    mod_spint<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 +
+    ## Fitting models with rstanarm:
+  
+  
+    # Model 1: random intercept:
+    mod__time_spint<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 +
        origin*strat + origin*temp1 + origin*temp2 + origin*temp3 +
        strat*temp1 + strat*temp2 + strat*temp3 +
        origin*strat*temp1 +  origin*strat*temp2 + origin*strat*temp3 + (1|sp), 
@@ -86,8 +91,20 @@ if (runstan==TRUE) {
        prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5)) # by default, creates four chains with 1000 warmup, and 1000 samling 
        # note to Lizzie: Tried: prior=normal(0,30), prior_intercept=normal(0,30), prior_aux=cauchy(0,15) but no change in output
   
-   #now adding random slopes
+   #Model 2: now adding random slopes
+    
+    mod_time_rslope<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
+                        origin*strat + origin*temp1 + origin*temp2 + origin*temp3 + 
+                        strat*temp1 + strat*temp2 + strat*temp3 +
+                        origin*strat*temp1 +  origin*strat*temp2 + origin*strat*temp3 + 
+                        (1|sp) +
+                        (origin -1|sp) + (strat -1|sp) + (temp1 -1|sp) + (temp2 -1|sp) +  (temp3 -1|sp) + (origin:strat -1|sp) + (origin:temp1 -1|sp) + (origin:temp2 -1|sp) + (origin:temp3 -1|sp)+
+                        (strat:temp1 -1|sp) + (strat:temp2 -1|sp) + (strat:temp3 -1|sp) + (origin:strat:temp1 -1|sp) + (origin:strat:temp2 -1|sp) + (origin:strat:temp3 -1|sp),
+                      data=germdata, algorithm= "sampling",
+                      prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=2000)
    
+  # Model 3: now adding additional nested random effects: 
+    
    mod_time_log<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
                             origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
                             strat:temp1 + strat:temp2 + strat:temp3 +
@@ -118,7 +135,7 @@ if (runstan==TRUE) {
 
 #----launching shiny stan---------
 load("mod_time_log.Rdata")
-my_sso <- launch_shinystan(q2, rstudio = getOption("shinystan.rstudio"))
+my_sso <- launch_shinystan(mod_rs, rstudio = getOption("shinystan.rstudio"))
 
 # plotting: 
 
