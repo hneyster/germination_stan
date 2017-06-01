@@ -26,7 +26,6 @@ source("http://peterhaschke.com/Code/multiplot.R")
 
 
 ## What do you want to do? 
-runstan=TRUE      # set to true if running the stan model 
 realdata=TRUE    # set to true to run on real data 
 
 if (realdata==TRUE) {
@@ -68,7 +67,6 @@ if (realdata==TRUE) {
 
 ## fitting the stan model -------------------------------------------------
 
-if (runstan==TRUE) {
   if (realdata==TRUE) {
     
     germdata=datax
@@ -119,60 +117,75 @@ if (runstan==TRUE) {
                           data=germdata, algorithm= "sampling",
                     prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=2000)
    
+   # model 4: now trying Poisson error distribution: 
+   
+   mod_time_pois<-stan_glmer(y ~ origin + strat + temp1 + temp2 + temp3 + 
+                               origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
+                               strat:temp1 + strat:temp2 + strat:temp3 +
+                               origin:strat:temp1 +  origin:strat:temp2 + origin:strat:temp3 + 
+                               (1|sp/loc/sfamily) +
+                               (origin -1|sp/loc/sfamily) + (strat -1|sp/loc/sfamily) + (temp1 -1|sp/loc/sfamily) + 
+                               (temp2 -1|sp/loc/sfamily) +  (temp3 -1|sp/loc/sfamily)+
+                               (origin:strat -1|sp/loc/sfamily) + (origin:temp1 -1|sp/loc/sfamily) + (origin:temp2 -1|sp/loc/sfamily) + 
+                               (origin:temp3 -1|sp/loc/sfamily) +  (strat:temp1 -1|sp/loc/sfamily) + (strat:temp2 -1|sp/loc/sfamily) + 
+                               (strat:temp3 -1|sp/loc/sfamily) + (origin:strat:temp1 -1|sp/loc/sfamily) + 
+                               (origin:strat:temp2 -1|sp/loc/sfamily) + (origin:strat:temp3 -1|sp/loc/sfamily),
+                             data=germdata, algorithm= "sampling", family=poisson,
+                             prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=2000)
+   
   #and checking against lmer model:
-   mod_rs_freq2<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
-                       origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
-                       strat:temp1 + strat:temp2 + strat:temp3 +
-                       origin:strat:temp1 +  origin:strat:temp2 + origin:strat:temp3 + 
-                       (1|sp/loc/sfamily) +
-                       (origin -1|sp/loc/sfamily) + (strat -1|sp/loc/sfamily) + (temp1 -1|sp/loc/sfamily) + 
-                       (temp2 -1|sp/loc/sfamily) +  (temp3 -1|sp/loc/sfamily),
-                      data=germdata, algorithm= "sampling",
-                      prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=1, iter=500)
+   mod_rs_freq2<-lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
+                                  origin*strat + origin*temp1 + origin*temp2 + origin*temp3 + 
+                                  strat*temp1 + strat*temp2 + strat*temp3 +
+                                  origin*strat*temp1 +  origin*strat*temp2 + origin*strat*temp3 + 
+                                  (1|sp) +
+                                  (origin -1|sp) + (strat -1|sp) + (temp1 -1|sp) + (temp2 -1|sp) +  (temp3 -1|sp) + (origin:strat -1|sp) + (origin:temp1 -1|sp) + (origin:temp2 -1|sp) + (origin:temp3 -1|sp)+
+                                  (strat:temp1 -1|sp) + (strat:temp2 -1|sp) + (strat:temp3 -1|sp) + (origin:strat:temp1 -1|sp) + (origin:strat:temp2 -1|sp) + (origin:strat:temp3 -1|sp),
+                                data=germdata, algorithm= "sampling",
+                                prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=2000)
 
    save(mod_time_log, "mod_time_log.Rdata")
-}
 
-#----launching shiny stan---------
+#------### MODEL ANALYSIS ###-------------
+   
+#launching shiny stan
+   
 load("mod_time_log.Rdata")
 my_sso <- launch_shinystan(mod_rs, rstudio = getOption("shinystan.rstudio"))
 
-# plotting: 
+mod_to_plot<- mod_time_pois
 
-p1<-plot(mod_time_log, pars=c("origin", "strat", "temp1", "temp2", "temp3", "origin:strat", "origin:temp1", "origin:temp2",
-                          "origin:temp3", "strat:temp1", "strat:temp2", "strat:temp3", "origin:strat:temp1", "origin:strat:temp2", "origin:strat:temp3"))
-
-p2<-plot(mod_time_log, pars=c("b[origin sp:1]", "b[strat sp:1]", "b[temp1 sp:1]", "b[temp2 sp:1]", "b[temp3 sp:1]", "b[origin:strat sp:1]",
-                          "b[origin:temp1 sp:1]", "b[origin:temp2 sp:1]", "b[origin:temp3 sp:1]", "b[strat:temp1 sp:1]", "b[strat:temp2 sp:1]", "b[strat:temp3 sp:1]", "b[origin:strat:temp1 sp:1]",
-                          "b[origin:strat:temp2 sp:1]", "b[origin:strat:temp3 sp:1]"))
-
-p3<-plot(mod_time_log, pars=c("b[origin sp:2]", "b[strat sp:2]", "b[temp1 sp:2]", "b[temp2 sp:2]", "b[temp3 sp:2]", "b[origin:strat sp:2]",
-                          "b[origin:temp1 sp:2]", "b[origin:temp2 sp:2]", "b[origin:temp3 sp:2]","b[strat:temp1 sp:2]", "b[strat:temp2 sp:2]", "b[strat:temp3 sp:2]", "b[origin:strat:temp1 sp:2]", 
-                          "b[origin:strat:temp2 sp:2]", "b[origin:strat:temp3 sp:2]"))
-
-p4<-plot(mod_time_log, pars=c("b[origin sp:3]", "b[strat sp:3]", "b[temp1 sp:3]", "b[temp2 sp:3]", "b[temp3 sp:3]", "b[origin:strat sp:3]",
-                          "b[origin:temp1 sp:3]", "b[origin:temp2 sp:3]",  "b[origin:temp3 sp:3]", "b[strat:temp1 sp:3]", "b[strat:temp2 sp:3]", "b[strat:temp3 sp:3]", "b[origin:strat:temp1 sp:3]",
-                          "b[origin:strat:temp2 sp:3]", "b[origin:strat:temp3 sp:3]"))
-
-p5<-plot(mod_time_log, pars=c("b[origin sp:4]", "b[strat sp:4]", "b[temp1 sp:4]", "b[temp2 sp:4]", "b[temp3 sp:4]", "b[origin:strat sp:4]",
-                          "b[origin:temp1 sp:4]", "b[origin:temp2 sp:4]",  "b[origin:temp3 sp:4]", "b[strat:temp1 sp:4]", "b[strat:temp2 sp:4]", "b[strat:temp3 sp:4]", "b[origin:strat:temp1 sp:4]",
-                          "b[origin:strat:temp2 sp:4]", "b[origin:strat:temp3 sp:4]"))
-
-p6<-plot(mod_time_log, pars=c("b[origin sp:5]", "b[strat sp:5]", "b[temp1 sp:5]", "b[temp2 sp:5]", "b[temp3 sp:5]", "b[origin:strat sp:5]",
-                          "b[origin:temp1 sp:5]", "b[origin:temp2 sp:5]",  "b[origin:temp3 sp:5]", "b[strat:temp1 sp:5]", "b[strat:temp2 sp:5]", "b[strat:temp3 sp:5]", "b[origin:strat:temp1 sp:5]",
-                          "b[origin:strat:temp2 sp:5]", "b[origin:strat:temp3 sp:5]"))
-
-p7<-plot(mod_time_log, pars=c("b[origin sp:6]", "b[strat sp:6]", "b[temp1 sp:6]", "b[temp2 sp:6]", "b[temp3 sp:6]", "b[origin:strat sp:6]",
-                          "b[origin:temp1 sp:6]", "b[origin:temp2 sp:6]",  "b[origin:temp3 sp:6]","b[strat:temp1 sp:6]", "b[strat:temp2 sp:6]", "b[strat:temp3 sp:6]", "b[origin:strat:temp1 sp:6]",
-                          "b[origin:strat:temp2 sp:6]", "b[origin:strat:temp3 sp:6]"))
+p1<-plot(mod_to_plot, pars=c("origin", "strat", "temp1", "temp2", "temp3", "origin:strat", "origin:temp1", "origin:temp2",
+                             "origin:temp3", "strat:temp1", "strat:temp2", "strat:temp3", "origin:strat:temp1", "origin:strat:temp2", "origin:strat:temp3")
+p2<-plot(mod_to_plot, pars=c("b[origin sp:1]", "b[strat sp:1]", "b[temp1 sp:1]", "b[temp2 sp:1]", "b[temp3 sp:1]", "b[origin:strat sp:1]",
+                             "b[origin:temp1 sp:1]", "b[origin:temp2 sp:1]", "b[origin:temp3 sp:1]", "b[strat:temp1 sp:1]", "b[strat:temp2 sp:1]", "b[strat:temp3 sp:1]", "b[origin:strat:temp1 sp:1]",
+                             "b[origin:strat:temp2 sp:1]", "b[origin:strat:temp3 sp:1]"))
+p3<-plot(mod_to_plot, pars=c("b[origin sp:2]", "b[strat sp:2]", "b[temp1 sp:2]", "b[temp2 sp:2]", "b[temp3 sp:2]", "b[origin:strat sp:2]",
+                             "b[origin:temp1 sp:2]", "b[origin:temp2 sp:2]", "b[origin:temp3 sp:2]","b[strat:temp1 sp:2]", "b[strat:temp2 sp:2]", "b[strat:temp3 sp:2]", "b[origin:strat:temp1 sp:2]", 
+                             "b[origin:strat:temp2 sp:2]", "b[origin:strat:temp3 sp:2]"))
+p4<-plot(mod_to_plot, pars=c("b[origin sp:3]", "b[strat sp:3]", "b[temp1 sp:3]", "b[temp2 sp:3]", "b[temp3 sp:3]", "b[origin:strat sp:3]",
+                             "b[origin:temp1 sp:3]", "b[origin:temp2 sp:3]",  "b[origin:temp3 sp:3]", "b[strat:temp1 sp:3]", "b[strat:temp2 sp:3]", "b[strat:temp3 sp:3]", "b[origin:strat:temp1 sp:3]",
+                             "b[origin:strat:temp2 sp:3]", "b[origin:strat:temp3 sp:3]"))
+p5<-plot(mod_to_plot, pars=c("b[origin sp:4]", "b[strat sp:4]", "b[temp1 sp:4]", "b[temp2 sp:4]", "b[temp3 sp:4]", "b[origin:strat sp:4]",
+                             "b[origin:temp1 sp:4]", "b[origin:temp2 sp:4]",  "b[origin:temp3 sp:4]", "b[strat:temp1 sp:4]", "b[strat:temp2 sp:4]", "b[strat:temp3 sp:4]", "b[origin:strat:temp1 sp:4]",
+                             "b[origin:strat:temp2 sp:4]", "b[origin:strat:temp3 sp:4]"))
+p6<-plot(mod_to_plot, pars=c("b[origin sp:5]", "b[strat sp:5]", "b[temp1 sp:5]", "b[temp2 sp:5]", "b[temp3 sp:5]", "b[origin:strat sp:5]",
+                             "b[origin:temp1 sp:5]", "b[origin:temp2 sp:5]",  "b[origin:temp3 sp:5]", "b[strat:temp1 sp:5]", "b[strat:temp2 sp:5]", "b[strat:temp3 sp:5]", "b[origin:strat:temp1 sp:5]",
+                             "b[origin:strat:temp2 sp:5]", "b[origin:strat:temp3 sp:5]"))
+p7<-plot(mod_to_plot, pars=c("b[origin sp:6]", "b[strat sp:6]", "b[temp1 sp:6]", "b[temp2 sp:6]", "b[temp3 sp:6]", "b[origin:strat sp:6]",
+                             "b[origin:temp1 sp:6]", "b[origin:temp2 sp:6]",  "b[origin:temp3 sp:6]","b[strat:temp1 sp:6]", "b[strat:temp2 sp:6]", "b[strat:temp3 sp:6]", "b[origin:strat:temp1 sp:6]",
+                             "b[origin:strat:temp2 sp:6]", "b[origin:strat:temp3 sp:6]"))
+p8<-plot(mod_to_plot, pars=c("b[origin sp:7]", "b[strat sp:7]", "b[temp1 sp:7]", "b[temp2 sp:7]", "b[temp3 sp:7]", "b[origin:strat sp:7]",
+                             "b[origin:temp1 sp:7]", "b[origin:temp2 sp:7]",  "b[origin:temp3 sp:7]","b[strat:temp1 sp:7]", "b[strat:temp2 sp:7]", "b[strat:temp3 sp:7]", "b[origin:strat:temp1 sp:7]",
+                             "b[origin:strat:temp2 sp:7]", "b[origin:strat:temp3 sp:7]"))
 
 pdf("timing_logged_rsi.pdf", width=20, height=11)
-multiplot(p1,p2, p3, p4, p5, p6, p7, cols=4)
+multiplot(p1,p2, p3, p4, p5, p6, p7, p8 cols=4)
 dev.off()
 
 
 #some model checking:
-
+posterior_interval(mod_time_pois, prob = 0.95, type = "central")
 #jpeg(filename = "qqnorm_germdate.jpeg", height=10.5, width=8, units="in", res=500)
 par(mfrow=c(2,1))
 #qqnorm(resid(mod_rs_freq), main="frequentist logged")
