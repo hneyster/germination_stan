@@ -221,17 +221,18 @@ pp_check(mod_time_pois_brm, type="hist", nsamples=8)
 #png("mod_time_pois.png", width=10, height=10, units="in", res=72)
 pp_check(mod_time_pois_brm_nt, type="hist", nsamples=8)
 #dev.off()
+p1<-pp_check(mod_time_pois_brm, nsamples=10)
+p2<-pp_check(mod_time_pois_brm_nt, nsamples = 10)
 res<-residuals(mod_time_pois_brm, nsamples=10)
 hist(res[,1], breaks=50, main="Residuals of truncated model")
 y_rep<-fitted(mod_time_pois_brm, nsamples= 500) #this is the replicated data 
-y_rep_notrumc<-fitted(mod_time_pois, nsamples=500) #this is replicated data from the non-truncated rstanarm poisson model 
-y_rep_brms_notrunc<-fitted(mod_time_pois_brm_nt, samples=500)
+y_rep_notrunc<-fitted(mod_time_pois_brm_nt, nsamples=500)
 
+#png("Germ_Timing_Poisson_brms.png")
 hist(y, breaks=30, col=rgb(0,0,0,.5), main= "pp_checks: y=gray, y_rep(trunc)=red, y_rep=blue") #this is the original data
-
 hist(y_rep[,1], breaks=30,  col=rgb(1,0,0,0.5), add=T) #these are the data 
-hist(y_rep_notrumc, breaks=20, col=rgb(0,0,1,0.5), add=T)
-png("Germ_Timing_Poisson_brms.png")
+hist(y_rep_notrunc[,1], breaks=20, col=rgb(0,0,1,0.5), add=T)
+#dev.off()
 
 ## k-fold cross validation: 
 #  kfold(mod_time_pois_brm, mod_time_pois_brm_nt, K=10)
@@ -242,9 +243,9 @@ png("Germ_Timing_Poisson_brms.png")
 
 mod_to_plot<- mod_time_pois_brm
 #brms objects and rstanarm objects have to be plotted differently: 
-if class(mod_to_plot)=="stanreg" {
+if ((class(mod_to_plot))[1]=="stanreg") {
 
-p1<-plot(mod_to_plot, pars=c("intercept_b", "origin", "strat", "temp1", "temp2", "temp3", "origin:strat", "origin:temp1", "origin:temp2",
+p1<-plot(mod_to_plot, pars=c("(Intercept)", "origin", "strat", "temp1", "temp2", "temp3", "origin:strat", "origin:temp1", "origin:temp2",
                              "origin:temp3", "strat:temp1", "strat:temp2", "strat:temp3", "origin:strat:temp1", "origin:strat:temp2", "origin:strat:temp3"))
 p2<-plot(mod_to_plot, pars=c("b[origin sp:1]", "b[strat sp:1]", "b[temp1 sp:1]", "b[temp2 sp:1]", "b[temp3 sp:1]", "b[origin:strat sp:1]",
                              "b[origin:temp1 sp:1]", "b[origin:temp2 sp:1]", "b[origin:temp3 sp:1]", "b[strat:temp1 sp:1]", "b[strat:temp2 sp:1]", "b[strat:temp3 sp:1]", "b[origin:strat:temp1 sp:1]",
@@ -275,33 +276,11 @@ multiplot(p1,p2, p3, p4, p5, p6, p7, p8, cols=4)
 else {
   p1<-stanplot(mod_to_plot, type="intervals", pars=c("b_intercept", "b_origin", "b_strat", "b_temp1", "b_temp2", "b_temp3", "b_origin:b_strat", "b_origin:b_temp1", "b_origin:temp2",
                                "b_origin:b_temp3", "b_strat:b_temp1", "b_strat:b_temp2", "b_strat:b_temp3", "b_origin:b_strat:b_temp1", "b_origin:b_strat:b_temp2", "b_origin:b_strat:b_temp3"))
-  p2<-stanplot(mod_to_plot, pars=c("b[origin sp:1]", "b[strat sp:1]", "b[temp1 sp:1]", "b[temp2 sp:1]", "b[temp3 sp:1]", "b[origin:strat sp:1]",
-                               "b[origin:temp1 sp:1]", "b[origin:temp2 sp:1]", "b[origin:temp3 sp:1]", "b[strat:temp1 sp:1]", "b[strat:temp2 sp:1]", "b[strat:temp3 sp:1]", "b[origin:strat:temp1 sp:1]",
-                               "b[origin:strat:temp2 sp:1]", "b[origin:strat:temp3 sp:1]"))
-  p3<-stanplot(mod_to_plot, pars=c("b[origin sp:2]", "b[strat sp:2]", "b[temp1 sp:2]", "b[temp2 sp:2]", "b[temp3 sp:2]", "b[origin:strat sp:2]",
-                               "b[origin:temp1 sp:2]", "b[origin:temp2 sp:2]", "b[origin:temp3 sp:2]","b[strat:temp1 sp:2]", "b[strat:temp2 sp:2]", "b[strat:temp3 sp:2]", "b[origin:strat:temp1 sp:2]", 
-                               "b[origin:strat:temp2 sp:2]", "b[origin:strat:temp3 sp:2]"))
-  p4<-stanplot(mod_to_plot, pars=c("b[origin sp:3]", "b[strat sp:3]", "b[temp1 sp:3]", "b[temp2 sp:3]", "b[temp3 sp:3]", "b[origin:strat sp:3]",
-                               "b[origin:temp1 sp:3]", "b[origin:temp2 sp:3]",  "b[origin:temp3 sp:3]", "b[strat:temp1 sp:3]", "b[strat:temp2 sp:3]", "b[strat:temp3 sp:3]", "b[origin:strat:temp1 sp:3]",
-                               "b[origin:strat:temp2 sp:3]", "b[origin:strat:temp3 sp:3]"))
-  p5<-stanplot(mod_to_plot, pars=c("b[origin sp:4]", "b[strat sp:4]", "b[temp1 sp:4]", "b[temp2 sp:4]", "b[temp3 sp:4]", "b[origin:strat sp:4]",
-                               "b[origin:temp1 sp:4]", "b[origin:temp2 sp:4]",  "b[origin:temp3 sp:4]", "b[strat:temp1 sp:4]", "b[strat:temp2 sp:4]", "b[strat:temp3 sp:4]", "b[origin:strat:temp1 sp:4]",
-                               "b[origin:strat:temp2 sp:4]", "b[origin:strat:temp3 sp:4]"))
-  p6<-stanplot(mod_to_plot, pars=c("b[origin sp:5]", "b[strat sp:5]", "b[temp1 sp:5]", "b[temp2 sp:5]", "b[temp3 sp:5]", "b[origin:strat sp:5]",
-                               "b[origin:temp1 sp:5]", "b[origin:temp2 sp:5]",  "b[origin:temp3 sp:5]", "b[strat:temp1 sp:5]", "b[strat:temp2 sp:5]", "b[strat:temp3 sp:5]", "b[origin:strat:temp1 sp:5]",
-                               "b[origin:strat:temp2 sp:5]", "b[origin:strat:temp3 sp:5]"))
-  p7<-stanplot(mod_to_plot, pars=c("b[origin sp:6]", "b[strat sp:6]", "b[temp1 sp:6]", "b[temp2 sp:6]", "b[temp3 sp:6]", "b[origin:strat sp:6]",
-                               "b[origin:temp1 sp:6]", "b[origin:temp2 sp:6]",  "b[origin:temp3 sp:6]","b[strat:temp1 sp:6]", "b[strat:temp2 sp:6]", "b[strat:temp3 sp:6]", "b[origin:strat:temp1 sp:6]",
-                               "b[origin:strat:temp2 sp:6]", "b[origin:strat:temp3 sp:6]"))
-  p8<-plot(mod_to_plot, pars=c("b[origin sp:7]", "b[strat sp:7]", "b[temp1 sp:7]", "b[temp2 sp:7]", "b[temp3 sp:7]", "b[origin:strat sp:7]",
-                               "b[origin:temp1 sp:7]", "b[origin:temp2 sp:7]",  "b[origin:temp3 sp:7]","b[strat:temp1 sp:7]", "b[strat:temp2 sp:7]", "b[strat:temp3 sp:7]", "b[origin:strat:temp1 sp:7]",
-                               "b[origin:strat:temp2 sp:7]", "b[origin:strat:temp3 sp:7]"))
-  
-}
+p1
+  }
 
-print(mod_time$coefficients)
 #some model checking:
-posterior_interval(mod_time_pois, prob = 0.95, type = "central")
+posterior_interval(mod_time_pois_brms, prob = 0.95, type = "central")
 #jpeg(filename = "qqnorm_germdate.jpeg", height=10.5, width=8, units="in", res=500)
 par(mfrow=c(2,1))
 #qqnorm(resid(mod_rs_freq), main="frequentist logged")
