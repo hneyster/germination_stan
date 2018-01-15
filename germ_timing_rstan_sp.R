@@ -241,7 +241,7 @@ hist(y_rep_notrunc[,1], breaks=20, col=rgb(0,0,1,0.5), add=T)
 ## mod_time_pois_brm_nt                             8491.21 298.36
 ## mod_time_pois_brm - mod_time_pois_brm_nt        -113.12  29.96
 
-mod_to_plot<- mod_time_pois_brm
+mod_to_plot<- mod_time_pois
 #brms objects and rstanarm objects have to be plotted differently: 
 if ((class(mod_to_plot))[1]=="stanreg") {
 
