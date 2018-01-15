@@ -1,14 +1,13 @@
+#Code to plot model coefficients for germination rate, time, and growth rate. 
+#Written by Harold Eyster 1/15/18
+
 ## housekeeping
 rm(list=ls()) 
 options(stringsAsFactors = FALSE)
 options(shinystan.rstudio = TRUE)
 options(mc.cores = parallel::detectCores())
 
-if(length(grep("Lizzie", getwd())>0)) { 
-  setwd("~/Documents/git/projects/misc/undergrads/harold/analyses/germination_stan") 
-} else 
-  setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
-
+setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
 source("http://peterhaschke.com/Code/multiplot.R") #so that the multiplot function works 
 figpath<-"C:/Users/Owner/Documents/Github/germination_stan"
 
@@ -33,51 +32,48 @@ library(tidyr)
 #######
 #######
 
-
-
 #data
 load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois_brm.Rdata")
 
-m<-mod_time_pois_brm
-m.int<-posterior_interval(m)
-sum.m<-summary(m)
-cri.f<-as.data.frame(sum.m$fixed[,c("Estimate", "l-95% CI", "u-95% CI")])
+m<-mod_time_pois_brm 
+sum.m<-summary(m) 
+cri.f<-as.data.frame(sum.m$fixed[,c("Estimate", "l-95% CI", "u-95% CI")]) #these are the global effects with CI
 cri.f<-cri.f[-1,] #removing the intercept 
-fdf1<-as.data.frame(rbind(as.vector(cri.f[,1]), as.vector(cri.f[,2]), as.vector(cri.f[,3])))
-fdf2<-cbind(fdf1, c(0, 0, 0) , c("Estimate", "2.5%", "95%"))
-names(fdf2)<-c(rownames(cri.f), "sp", "perc")
+fdf1<-as.data.frame(rbind(as.vector(cri.f[,1]), as.vector(cri.f[,2]), as.vector(cri.f[,3]))) # Making into a dataframe 
+fdf2<-cbind(fdf1, c(0, 0, 0) , c("Estimate", "2.5%", "97.5%")) #adding zeros to denote that these are the global effects 
+names(fdf2)<-c(rownames(cri.f), "sp", "perc") #renaming 
 
 cri.r<-(ranef(m, summary = TRUE, robust = FALSE,
-     probs = c(0.025, 0.975)))$sp
-cri.r2<-cri.r[, ,-1]
-cri.r2<-cri.r2[,-2,]
+     probs = c(0.025, 0.975)))$sp   #extracting the random effects 
+cri.r2<-cri.r[, ,-1] #removing the intercept 
+cri.r2<-cri.r2[,-2,] #removing the est error
 dims<-dim(cri.r2)
-twoDimMat <- matrix(cri.r2, prod(dims[1:2]), dims[3])
-mat2<-cbind(twoDimMat, c(rep(1:7, length.out=21)), rep(c("Estimate", "2.5%", "95%"), each=7))
+twoDimMat <- matrix(cri.r2, prod(dims[1:2]), dims[3]) #converting to matrix 
+mat2<-cbind(twoDimMat, c(rep(1:7, length.out=21)), rep(c("Estimate", "2.5%", "97.5%"), each=7)) #adding a species column 
 df<-as.data.frame(mat2)
-names(df)<-c(rownames(cri.f), "sp", "perc")
-dftot<-rbind(fdf2, df)
-dflong<- gather(dftot, var, value, origin:`origin:strat:temp3`, factor_key=TRUE)
+names(df)<-c(rownames(cri.f), "sp", "perc") #renaming 
+dftot<-rbind(fdf2, df) #combining global fixed effects and random effects 
+dflong<- gather(dftot, var, value, origin:`origin:strat:temp3`, factor_key=TRUE) #converting to long format
 
-#adding the coef estiamtes to the random effect values 
+#adding the global  estiamtes to the random effect values 
 for (i in seq(from=1,to=nrow(dflong), by=24)) {
   for (j in seq(from=3, to=23, by=1)) {
     dflong$value[i+j]<- as.numeric(dflong$value[i+j]) + as.numeric(dflong$value[i])
   }
 }
-dflong$rndm<-ifelse(dflong$sp>0, 2, 1)
-dfwide<-spread(dflong, perc, value)
-dfwide[,4:6] <- as.data.frame(lapply(c(dfwide[,4:6]), as.numeric ))
-dfwide$sp<-as.factor(dfwide$sp)
+dflong$rndm<-ifelse(dflong$sp>0, 2, 1) #adding a new column that signifies weather a coeff is global or a random effect 
+dfwide<-spread(dflong, perc, value) #widening it a bit
+dfwide[,4:6] <- as.data.frame(lapply(c(dfwide[,4:6]), as.numeric )) #making numeric 
+dfwide$sp<-as.factor(dfwide$sp) 
 ## plotting
 
 pdf(file.path(figpath, "Fig1.pdf"), width = 7, height = 8)
-pd <- position_dodgev(height = -0.5)
+pd <- position_dodgev(height = -0.5) #the negative here makes it so the global effects are plotted above the others 
 
 
 fig1 <-ggplot(dfwide, aes(x=Estimate, y=var, color=factor(sp), size=factor(rndm), alpha=factor(rndm)))+
   geom_point(position =pd, size=4)+
-  geom_errorbarh(aes(xmin=(`2.5%`), xmax=(`95%`)), position=pd, size=.5, height =0)+
+  geom_errorbarh(aes(xmin=(`2.5%`), xmax=(`97.5%`)), position=pd, size=.5, height =0)+
   geom_vline(xintercept=0)+
   scale_colour_manual(labels = c("Fixed effects", "CAPBUR", "CHEMAJ", "DACGLO", "PLALAN", "PLAMAJ", "RUMCRI", "TAROFF"),
                       values=c("blue", "red", "orangered1", "sienna4", "green4", "green1", "purple2", "magenta2"))+
@@ -85,7 +81,7 @@ fig1 <-ggplot(dfwide, aes(x=Estimate, y=var, color=factor(sp), size=factor(rndm)
   scale_alpha_manual(values=c(1, 0.5))+
   guides(alpha=FALSE) + #removes the legend 
   ggtitle(label = "Days to Germination")+ 
-  scale_y_discrete(limits = rev(unique(sort(dfwide$var))))
+  scale_y_discrete(limits = rev(unique(sort(dfwide$var)))) #reverses the y axis 
 fig1
 dev.off()
 
@@ -96,7 +92,8 @@ dev.off()
 #data: 
 load("C:/Users/Owner/Documents/Thesis/Stan/mod_rate.Rdata")
 
-m<-mod_rate
+m<-mod_rate 
+# This is an Rstanarm object, and so behaves differently than th previous brms object. Thus the coeffs have to be extracted differently. 
 sum.m<-summary(m, pars=c("(Intercept)", "origin", "strat", "temp1", "temp2", "temp3", "origin:strat", "origin:temp1", "origin:temp2",
  "origin:temp3", "strat:temp1", "strat:temp2", "strat:temp3", "origin:strat:temp1", "origin:strat:temp2", "origin:strat:temp3"
 , "b[origin sp:1]", "b[strat sp:1]", "b[temp1 sp:1]", "b[temp2 sp:1]", "b[temp3 sp:1]", "b[origin:strat sp:1]",
@@ -126,14 +123,14 @@ fdf<-data.frame(cri.f)
 #binding 
 fdf2<-as.data.frame(
   cbind(
-    (c(rownames(fdf)[1:15], rep(rev(rownames(fdf)[1:15]), each=7))),
-                             as.numeric(as.character(fdf$mean)), 
-                             as.numeric(as.character(fdf$X2.5.)), 
-                             as.numeric(as.character(fdf$X97.5.)), 
-                             as.numeric(c(rep(1, 15), rep(2, 105))), 
-                            as.numeric( c(rep(0,15), rep(seq(1:7),15 )))))
+    (c(rownames(fdf)[1:15], rep(rev(rownames(fdf)[1:15]), each=7))), #stdarzing the parameter  names 
+                             as.numeric(as.character(fdf$mean)),  # the estimate 
+                             as.numeric(as.character(fdf$X2.5.)), #lower bound, 95% CI
+                             as.numeric(as.character(fdf$X97.5.)),  #upper bound, 95% CI
+                             as.numeric(c(rep(1, 15), rep(2, 105))),  # A variable to signify if the corresponding row is a global or random effect. 1=global, 2=rndm
+                            as.numeric( c(rep(0,15), rep(seq(1:7),15 ))))) #sp variable. Zero when global. 
 
-names(fdf2)<-c("var", "Estimate", colnames(cri.f)[c(2,3)], "rndm", "sp")
+names(fdf2)<-c("var", "Estimate", colnames(cri.f)[c(2,3)], "rndm", "sp") #renaming. 
 
 fdf2$Estimate<-as.numeric(fdf2$Estimate)      
 fdf2$`2.5%`<-as.numeric(fdf2$`2.5%`)
