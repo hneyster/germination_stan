@@ -1,0 +1,352 @@
+---
+title: "Average Predictive Comparisons for Stanfit objects"
+author: Harold Eyster
+date: April 16, 2019
+output: html_document
+---
+```{r, echo=FALSE, warning=FALSE, message = FALSE}
+library(rmarkdown)
+
+
+rm(list=ls())
+options(stringsAsFactors = FALSE)
+library(modmarg)
+library(dplyr)
+library(arm)
+```
+
+
+#### Situation:
+Average predictive comparisons are a good way to interpret complex models 
+
+#### Compication: 
+It's hard to implement this method, and the difference between this method and average marginal effects is unclear. 
+
+#### Question:
+Can implementing Average Predictive Comparisons be made accessible and intelligible relative to other methods? 
+
+#### Answer:
+Let's implement it in R! 
+
+### What are Average Predictive Comparisons? 
+Average Predictive Comparisons can increase interpretability of variables in complex (e.g., hierarchical and interactive) models. Gelman and Pardoe [(2007)](http://www.stat.columbia.edu/~gelman/research/published/ape17.pdf) presented the theoretical argument for their efficacy, but there are no easily accessible implementations. There is an R package [(predcomps)](https://dchudz.github.io/predcomps/) developed by David Chudzicki in 2014, but is only suited for a few model types (e.g., lm ), doesn't allow categorical inputs, and does not appear to be under any further development.  
+
+### Average Marginal Effects 
+
+Another R package, [modmarg](https://github.com/anniejw6/modmarg), reverse engineers Stata's [margins](https://www.stata.com/support/faqs/statistics/compute-standard-errors-with-margins/) function to create average marginal effects and std errors. See [here](https://github.com/anniejw6/compas-analysis/blob/master/01-regression-correction.ipynb) for an example where this method increases model interpretability.  This package only works for `glm` and `ivreg` objects in R. Are average marginal effects and average predictive comparisons the same?  Not quite. It is calculated  differently. To find the average marginal effect of, say, forest type on biodiversity, first a model is created using all of your data on the diversity found in forest and nonforest patches. Then, all the data is set to forest and the model is used to predict the biodiversity in these plots and the mean is taken; next all the data is set to 'nonforest' and again the model is used to predict biodiversity, and the mean is taken. The difference between these means is the average marginal effect. To estimate the associated standard error, this approach uses the [delta method](https://www.statlect.com/asymptotic-theory/delta-method). Let's look at an example to see how this works.
+
+#### Average marginal effects example 
+First, let's create some fake data that we'll pretend represent our observations of birds in forest and nonforest plots: 
+```{r, echo=TRUE, warning=FALSE, message = FALSE}
+set.seed(538)
+biodiv.forest<- round(rnorm(50,50,5), 0)
+biodiv.nonforest <-round(rnorm(50,40,5), 0)
+biodiv<-c(biodiv.forest,biodiv.nonforest)
+forest<-c(rep(1,50),rep(0,50))
+dat <- data.frame(cbind(biodiv,forest))
+```
+We can see that we now have observations from 100 plots -- 50 forest and 50 nonforest. 
+```{r, echo=TRUE, warning=FALSE, message = TRUE}
+head(dat)
+```
+Now let's create a simple model: 
+```{r}
+mod<-glm(biodiv~forest, data=dat, family=gaussian)
+```
+Now let's run a average marginal effects analysis: 
+First setting all the data to forest:
+```{r}
+dat.forest<-data.frame(cbind(biodiv, 'forest'=rep(1,100)))
+
+```
+And predicting with the model: 
+```{r}
+pred_forest <- predict(mod, newdata = dat.forest, type = 'response') 
+```
+And taking the average:
+```{r}
+(avg.forest<-mean(pred_forest))
+```
+Now doing the same for nonforest: 
+```{r}
+dat.nonforest<-data.frame(cbind(biodiv, 'forest'=rep(0,100)))
+pred_nonforest <- predict(mod, newdata = dat.nonforest, type = 'response') 
+(avg.nonforest<-mean(pred_nonforest))
+```
+We can see that the average marginal effect of forest on biodiversity is 
+```{r}
+avg.forest-avg.nonforest
+```
+Now confirming that the `modmarg` package yields the same answer:
+```{r}
+modmarg::marg(mod, 'forest', type = 'levels')
+
+```
+Which is the same as the 'forest' coefficient from our linear model: 
+```{r}
+summary.glm(mod)$coefficients
+```
+
+This equivalence is because this is a simple model with no interactions, transformations, or mixed-effects -- in more complex models, marginal effects become more useful. To see an example of marginal effects applied to a more complex model, and proof of their usefulness, see [here](https://github.com/anniejw6/compas-analysis/blob/master/01-regression-correction.ipynb).
+
+#### Variance
+We want to have some idea about how well-constrained these average marginal effects values are. We cannot just average the standard errors from `pred_nonforest` and `pred_forest`, since these do not represent the uncertainty encoded in `mod`. Instead, AME uses the [delta method](https://cran.r-project.org/web/packages/modmarg/vignettes/delta-method.html) to estimate variance. What is the delta method? Simplistically: given a known sequence of random numbers, $\{\hat{\theta}_{n}\}$ (the original `dat` in our example), that converge asymptotically to a distribution with known mean $\theta_{0}$ and known variance $V$ (e.g., `mod`) such that: 
+
+\begin{align}
+\tag{1}
+\displaystyle \sqrt{n} (\hat{\theta}_{n}-\theta_0) \to^{d} N(0, V) 
+\end{align} 
+
+Then applying a continuously differentiable function $g$ (the marginal effect) acting on these random numbers, the delta method can be used to find the model parameters corresponding to the new random number sequence:
+
+
+\begin{align}
+\tag{2}
+\displaystyle \sqrt{n} (g(\hat{\theta}_{n})-g(\theta_0)) \to^{d} N \left( 0, \left( \frac{dg(\theta_{0})}{d\theta} \right) ^{2} V \right)
+\end{align} 
+
+How do these average marginal effects compare to average predictive comparisons?
+
+### Average Predictive Comparisons
+
+
+
+Average predictive comparisons are calculated differently. From eq'n (1) of Gelman and Pardoe, a predictive comparison of changing the input of interest, $\upsilon$, from one value to another is defined as: 
+
+\begin{align}
+\tag{3}
+\displaystyle \delta_{u}(\upsilon^{1} \to \upsilon^{2}, \nu, \theta) = \frac{E(y|\upsilon^{2}, \nu,\theta) - E(y|\upsilon^{1}, \nu,\theta)} {\upsilon^{2}-\upsilon^{1}} 
+\end{align}
+
+Where $\theta$ is the model, $y$ is the response variable, and $\nu$ is a vector of all the other variables (i.e., all the variables except $\upsilon$). 
+
+In our example, $\theta$ is `mod`, $y$ is `biodiv`, $\upsilon$ is `forest`, and $\nu$ is empty, because our example did not have any other predictors. Average predictive comparisons are distinct from partial derivatives, since APCs do not collapse $\upsilon^{2} - \upsilon^{1}$ to zero.
+
+But this equation is just the predictive comparison -- to get the *average* predictive comparison, we need to average (in this case, the root-mean-square) across values of $\theta$ and $\nu$ and changes in $\upsilon$. For unordered categorical inputs (e.g., `forest` and `nonforest` in our example), the APC is defined as: 
+
+
+\begin{align}
+\tag{4}
+\displaystyle APC = \widehat{\Delta} \upsilon =  \left( \frac{\sum_{i=1}^{n} \sum_{k=1}^{K} \sum_{s=1}^{S} [\sum_{j\space \epsilon(k)} \omega(\upsilon_i,\upsilon_j)]E(y|\upsilon^{k}, \nu_i,\theta^s) - E(y|\upsilon_i, \nu_i,\theta^s)} {S \sum_{i=1}^{n} \sum_{k=1}^{K}[\sum_{j\space \epsilon(k)} \omega(\upsilon_i,\upsilon_j)]} \right) ^{\frac{1}{2}}
+\end{align}
+
+Where n is the number of observations in the data (n=50 in our example `dat`), K is the number of categories (K=2 in our example `dat`), S is the number of model draws, and  $\omega(\upsilon_i,\upsilon_j)$ is the likelihood that $\upsilon$ transitions from $\upsilon_i$ to $\upsilon_j$ when $\nu = \nu_i$. For example, let's say that for every habitat patch ($i$) we not only had data on bird diversity and forest cover, but also data on how many chainsaws were operating in each patch. Our dataset would not be balanced -- there would be no chainsaws operating in the nonforest areas. Thus, when $\nu_i = nonforest$, the likelihood of a transition from $\upsilon_i=5 \space chainsaws$ to  $\upsilon_i=6 \space chainsaws$ would be zero. This addition of a weighting element is one way that APC differs from AME. AME  assumes that all variables are balanced and uncorrelated, whereas APC accounts for any correlation between input variables. 
+
+#### Variance 
+Variance is the second way that APC differs from AME.  Instead of of using the Delta Method, APCs extract the uncertainty directly from the uncertainty in the model, $\theta$. In a Bayesian context, this model uncertainty is obtained from draws, $s$, from the posterior distribution. In a Frequentist context, these could be obtained by e.g., bootstrapping. This makes APCs especially amenable to Bayesian models, and obviates the computation complexity from using the delta method. This difference in assessing uncertainty is the primary distinction between AME and APC. 
+To see clearly how the APC standard error results directly from the uncertainty in the model, see this definition of APC standard error for unorderd categorical inputs: 
+
+
+\begin{align}
+\tag{5} 
+\displaystyle S.E.(\widehat{\Delta_\upsilon})=\frac{1}{2 \widehat{\Delta_\upsilon}}\left( \frac{1}{S-1} \sum_{s=1}^S[(\widehat{\Delta_\upsilon^s})^2-(\widehat{\Delta_\upsilon})^2]^{2} \right)^{\frac{1}{2}}
+\end{align}
+
+
+<!-- #### Example -->
+<!-- Let's repeat our analysis the same analysis that we did with AME, but this time using APC.  -->
+<!-- We will use the same simulated `dat` of forest and non-forest bird richness. First, we obtain 100 simulated draws from the `dat`:  -->
+
+<!-- ```{r} -->
+<!-- mod.sim<-arm::sim(mod, n.sims =100) -->
+
+<!-- ``` -->
+<!-- Next, we  plug `forest` and `nonforest` into equation 3 for $\upsilon^{2}$ and $\upsilon^{1}$, respectively.  -->
+
+### Differences between APC and AME: 
+To recap, the two primary differences between AME and APC are: 
+1. One assumption that AMEs make is that they [assume that all input variables independent and uncorrelated](https://www.researchgate.net/profile/Richard_Williams41/publication/254395746_Using_the_Margins_Command_to_Estimate_and_Interpret_Adjusted_Predictions_and_Marginal_Effects/links/56a7bbd208ae997e22bc04c5/Using-the-Margins-Command-to-Estimate-and-Interpret-Adjusted-Predictions-and-Marginal-Effects.pdf). APC, on the other hand, weights each set of variable values according to their frequency in the data. 
+2. They calculate uncertainty around the point estimates differently -- AME uses the Delta Method, whereas APC uses the variability in the model draws. This makes APC well-suited for Bayesian models and more complex models. 
+
+### A real example
+
+Given the potential for APCs to make complex Bayesian models more interpretable, I will apply this method to a model that describes real data on growth time of invasive plants. 
+
+#### The model
+The model includes three unordered categorical fixed effects: stratification length (`strat` -- 2 levels), germination temperature (`temp` -- 4 levels), seed origin (`origin` -- 2 levels). These fixed effects have a full suite of interaction terms. The model also includes three nested random slopes and intercepts:  seed family (`sfamily`) nested within sampling location (`loc`) nested within species (`sp`). The output variable is growth rate. The data come from a balanced experiment, where the treatment variables were uncorrelated. The model was fitted with $n = 1119$ observations using Stan and  rstanarm. 
+
+Our goal will be to calculate the Average Predictive Comparison for $\upsilon =$`origin`. First, let's load the model:
+```{r}
+load("C:/Users/Owner/Documents/Thesis/Stan/mod_gr.Rdata")
+mod<-mod_gr
+```
+and the data:
+```{r}
+load("C:/Users/Owner/Documents/github/germination_stan/datax.Rdata")
+dat<-datax
+```
+Let's see what the data structure looks like: 
+```{r}
+head(dat)
+```
+and add some libraries necessary to process stanfit objects:
+```{r,warning=FALSE, message=FALSE}
+require(rstan)
+require(rstanarm)
+```
+
+Because the data come from a balanced experiment  (i.e., every combination of input values is equally likely to co-occur), we can ignore the weighting element of the APC in equation (4). Additionally, because `origin` is a binary variable, we do not have to sum across multiple values of $k$.Thus, equation 4 becomes: 
+
+
+\begin{align}
+\tag{6}
+\displaystyle APC = \widehat{\Delta} \upsilon =  \left( \frac{\sum_{i=1}^{n} \sum_{s=1}^{S} (E(y|\upsilon=1, \nu_i,\theta^s) - E(y|\upsilon=0, \nu_i,\theta^s))^2} {S n}  \right) ^{\frac{1}{2}}
+\end{align}
+
+
+ Our dataset has 1119 observations -- we'll use this full set of $\nu$ values, since the vectorized code below is quite efficient. We'll also use a sample of 1000 posterior draws (S=1000). The code below uses the model to calculate the expected growth rate for each value of $\nu$ and $\theta$, for given values of $\upsilon$`(origin` = 1 and 0). Then, following equation 6, we take the squared difference and sum over $\nu$ and $\theta$.
+```{r}
+S<-1000
+n<-nrow(dat) #1119
+newdat<-dat[,c(3:7,9:11)] #subsetting just the observation data, nu and upsilon 
+newdat1<-newdat
+newdat1$origin<-rep(1,n)
+newdat0<-newdat
+newdat0$origin<-rep(0,n)
+E_u1<-posterior_predict(mod,newdata=newdat1,draws=S,seed=248) #each of these columns 
+#represents the expected value for a different value of nu; each row represents the 
+#expected value according to a different model draw; each of these is for origin=1 
+E_u0<-posterior_predict(mod,newdata=newdat0,draws=S,seed=248) # Now the same, but for origin=0
+E_diff<-((E_u1-E_u0)^2) #the squared difference, as in equation 6. 
+sum_theta<-colSums(E_diff) #summing across model draws 
+sum_nu_theta<-sum(sum_theta) #summing across nu
+num<-sum_nu_theta #this is the numerator in equation 6 
+(num)
+```
+`num` is the numerator of the fraction in eq'n (4). For the denominator: 
+
+```{r}
+denom<-S*n
+(denom)
+```
+Finally, the Average Predictive Comparison for `origin` is: 
+```{r}
+APC<-(num/denom)^(1/2)
+(APC)
+```
+
+
+Now to calculate the standard error, as in equation 5. 
+```{r}
+sum_nu<-rowSums(E_diff)/n
+```
+
+ `sum_nu` represents $(\widehat{\Delta}_\upsilon^s)^2$ in equation 5, with each value representing a different draw of $s$. 
+```{r}
+apc_vec<-rep(APC^2,S) # a vector of apc 
+SE<-(1/(2*APC))*(sqrt(1/(S-1)*(sum  ((sum_nu-apc_vec)^2)  )))
+(SE)
+```
+Now we'll wrap the above code into a function, for future calculations: 
+```{r}
+apc<-function(mod,dat){
+  S<-1000
+  n<-nrow(dat) #1119
+  newdat<-dat[,c(3:7,9:11)] #subsetting just the observation data, nu and upsilon 
+  newdat1<-newdat
+  newdat1$origin<-rep(1,n)
+  newdat0<-newdat
+  newdat0$origin<-rep(0,n)
+  E_u1<-posterior_predict(mod,newdata=newdat1,draws=S,seed=248) #each of these columns
+    #represents the expected value for a different value of nu; each row represents the 
+    #expected value according to a different model draw; each of these is for origin=1 
+  E_u0<-posterior_predict(mod,newdata=newdat0,draws=S,seed=248) # Now the same, but for origin=0
+  E_diff<-((E_u1-E_u0)^2) #the squared difference, as in equation 6. 
+  sum_theta<-colSums(E_diff) #summing across model draws 
+  sum_nu_theta<-sum(sum_theta) #summing across nu
+  num<-sum_nu_theta #this is the numerator in equation 6 
+  denom<-S*n #this is the denominator in equation 6. 
+  APC<-(num/denom)^(1/2) #this is the average predictive comparison 
+
+  #now calculating the stadard error
+  sum_nu<-rowSums(E_diff)/n
+  apc_vec<-rep(APC^2,S) # a vector of apc 
+  SE<-(1/(2*APC))*(sqrt(1/(S-1)*(sum  ((sum_nu-apc_vec)^2)  ))) #The standard error
+  return(paste('APC =',APC, ', SE = ',SE))
+}
+```
+And testing it: 
+```{r}
+apc(mod_gr, datax)
+```
+
+What is the APC telling us? It reports that, on average, the growth rate of a plant with a European origin will differ from that with an American origin by 0.04  cm/day.  The average growth rate for all plants was 0.12 cm/day. Thus, this effect of origin is quite important. 
+
+#### Validation 
+How do the APC values compare to our model coefficients? 
+```{r}
+as.data.frame(summary(mod_gr,pars=c("origin")))
+
+```
+The model coefficient, $0.006575513$, is much less than the APC. Why is this? It's because we are working with a model with interactions and random effects. The APC takes these all into a account, and thus reports a more holistic effect of `origin`. But how do we know that our calculation is correct and makes sense? There are no accepted ways for calculating apc for such a complex model, but we can validate our method on a simpler one. 
+
+For a model with no interactions and no random effects, we expect that the APC = coefficient. Thus, let's create and test this simpler model: 
+```{r, message=FALSE,warning=FALSE}
+mod2<-stan_glm(y~origin+strat+temp1+temp2+temp3+sp+loc+sfamily,data=dat, 
+               algorithm = "sampling", prior=normal(), prior_intercept=normal(0,10),
+               prior_aux=cauchy(0,5), chains=4, iter=1000,refresh=0)
+
+apc(mod2,datax) #apc
+as.data.frame(summary(mod2,pars=c("origin"))) #model coefficient 
+
+```
+Here we see good alignment between our APC and the model coefficient, as predicted. Thus, our method seems to be valid. 
+
+We can also verify that the Average Marginal Effect is the same: 
+```{r}
+
+mod3<-glm(y~origin+strat+temp1+temp2+temp3+sp+loc+sfamily,data=dat) #the `marg' function doesn't work on stanfit objects, so making glm model. 
+marg(mod3,'origin', type='effects')
+```
+# Conclusion
+Average Predictive Comparisons offer a powerful method for interpreting complex models. They offer 2 benfits over Average Marginal Effects: 1) they account for the correlation of input variables and 2) offer a simpler standard error calculation. Due to their capacity to directly utilize model uncertainty, they are especiallly well-suited for Bayesian models. Here, I have demonstrated their applicability to a hierachical mixed-effect model, and shown the utility of the result.  APCs should become more widelly used to interpret complex Bayesian models. I hope that this illustration can serve as a guide for future attempts.  
+```{r, echo=FALSE, warning=FALSE, message = FALSE}
+# #### ARCHIVE ######
+# 
+# 
+# #install_github("dchudz/predcomps")
+# library(predcomps)
+# library(modmarg)
+# library(margins)
+# 
+# #teting:
+# df2<-margex[c("outcome","age", "treatment")]
+# g <- glm(outcome ~ ., data = df2, family = binomial)
+# mm<-marg(mod = g, var_interest = "age", type = 'levels')
+# marg(mod = g, var_interest = "treatment", type = 'effects')
+# #Label     Margin Standard.Error Test.Stat      P.Value Lower CI (95%) Upper CI (95%)
+# #1 treatment = 0 0.00000000      0.0000000       NaN          NaN     0.00000000      0.0000000
+# #2 treatment = 1 0.09653243      0.0128922  7.487659 7.011271e-14     0.07126417      0.1218007
+# margins(g)
+# #age treatment
+# #0.01179   0.09808
+# GetPredCompsDF(g,df=df2)
+# #Input PerUnitInput.Signed PerUnitInput.Absolute Impact.Signed Impact.Absolute
+# #age             age          0.01135281            0.01135281    0.14522097      0.14522097
+# #treatment treatment          0.09436611            0.09436611    0.04516132      0.04516132
+# 
+# #first creating APC for germination date 
+# load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois_brm.Rdata") #this is my brms stanfit object. 
+
+
+
+# 
+# 
+# sum_nu <- vector() #this will hold the sums across all values of nu 
+# for (i in sample(1:nrow(dat), n, replace=FALSE)){
+# newdat<-dat[i,3:11] 
+# newdat1<-newdat # nu_i
+# newdat1$origin<-1
+# newdat0<-newdat
+# newdat0$origin<-0 
+# E_u2<-posterior_predict(mod,newdata=newdat1,draws=S,seed=248)
+# E_u1<-posterior_predict(mod,newdata=newdat0,draws=S,seed=248)
+# E_diff<-colSums(E_u2-E_u1) # This is summing across all values of s
+# sum_nu<-sum(c(sum_nu,E_diff))
+# }
+# num<-(sum_nu)^2
+
+#newdat<-dat[c(sample(1:nrow(dat), n, replace=FALSE)),3:11] 
+```
+
+
