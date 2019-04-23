@@ -318,8 +318,8 @@ $(document).ready(function () {
 <h4>Situation:</h4>
 <p>Average predictive comparisons are a good way to interpret complex models</p>
 </div>
-<div id="compication" class="section level4">
-<h4>Compication:</h4>
+<div id="complication" class="section level4">
+<h4>Complication:</h4>
 <p>It’s hard to implement this method, and the difference between this method and average marginal effects is unclear.</p>
 </div>
 <div id="question" class="section level4">
@@ -332,7 +332,7 @@ $(document).ready(function () {
 </div>
 <div id="what-are-average-predictive-comparisons" class="section level3">
 <h3>What are Average Predictive Comparisons?</h3>
-<p>Average Predictive Comparisons can increase interpretability of variables in complex (e.g., hierarchical and interactive) models. Gelman and Pardoe <a href="http://www.stat.columbia.edu/~gelman/research/published/ape17.pdf">(2007)</a> presented the theoretical argument for their efficacy, but there are no easily accessible implementations. There is an R package <a href="https://dchudz.github.io/predcomps/">(predcomps)</a> developed by David Chudzicki in 2014, but is only suited for a few model types (e.g., lm ), doesn’t allow categorical inputs, and does not appear to be under any further development.</p>
+<p>Average Predictive Comparisons can increase interpretability of variables in complex (e.g., hierarchical and interactive) models. Gelman and Pardoe <a href="http://www.stat.columbia.edu/~gelman/research/published/ape17.pdf">(2007)</a> presented the theoretical argument for their efficacy, but there are no easily accessible implementations. There is an R package <a href="https://dchudz.github.io/predcomps/">(predcomps)</a> developed by David Chudzicki in 2014, but is only suited for a few model types (e.g., lm ), doesn’t allow unorderd categorical inputs, does not provide uncertainty estimates, and does not appear to be under any further development.</p>
 </div>
 <div id="average-marginal-effects" class="section level3">
 <h3>Average Marginal Effects</h3>
@@ -564,6 +564,90 @@ marg(mod3,'origin', type='effects')</code></pre>
 ## 1     0.00000000     0.00000000
 ## 2     0.05358807     0.09332141</code></pre>
 </div>
+</div>
+<div id="comparing-to-predcomps" class="section level3">
+<h3>Comparing to predcomps</h3>
+<p>How does our result compare to the <code>predcomps</code> package? This package only works or numerical, ordered, or binary inputs. It also only works for linear models. So we’ll have to simplify our model a good deal in order to compar this method. Such a simple model cannot satisfactorally model our real data, so we’ll first simulate some simpler data:</p>
+<pre class="r"><code>set.seed(100)
+nind=n
+norigin = 2 
+nstrat = 2
+rep = round((nind/(norigin*nstrat)), digits=0) 
+ntot = norigin*nstrat*rep
+
+# Build up the data frame
+origin = as.numeric(as.character(gl(norigin, rep, length = ntot, labels=c(0,1))))
+strat = as.numeric(as.character(gl(nstrat, rep*norigin, length = ntot, c(0,1))))
+treatcombo = paste( origin, strat, sep = &quot;_&quot;)
+d &lt;- data_frame( origin, strat, treatcombo)
+
+###### Set up differences for each level
+origindiff = 0.5
+stratdiff = 0.5
+
+######## SD for each treatment
+origindiff.sd = 0.05
+stratdiff.sd = 0.05
+
+# interactions. 1 two-way interactions
+originstrat = .3 # 
+originstrat.sd = 0.05 # 
+
+mm &lt;- model.matrix(~(origin+strat)^2, data.frame(origin, strat))
+baseinter = .12 # baseline intercept
+
+  coeff &lt;- c(baseinter, 
+             rnorm(1, origindiff, origindiff.sd), 
+             rnorm(1, stratdiff, stratdiff.sd),
+             rnorm(1, originstrat, originstrat.sd)
+  )
+  
+  bb &lt;- rnorm(n = length(origin), mean = mm %*% coeff, sd = 0.1)
+  
+  fakex &lt;- data.frame(y=bb,  origin, strat)</code></pre>
+<p>And verify that a model is accurate with both a frequentist and Bayesian approach:</p>
+<pre class="r"><code>simple_lm&lt;-lm(y~origin+strat+origin:strat,data=fakex)
+simple_bay&lt;-stan_glm(y~origin+strat+origin:strat,data=fakex,iter=1000)</code></pre>
+<pre class="r"><code>display(simple_lm)</code></pre>
+<pre><code>## lm(formula = y ~ origin + strat + origin:strat, data = fakex)
+##              coef.est coef.se
+## (Intercept)  0.12     0.01   
+## origin       0.47     0.01   
+## strat        0.51     0.01   
+## origin:strat 0.29     0.01   
+## ---
+## n = 1120, k = 4
+## residual sd = 0.10, R-Squared = 0.95</code></pre>
+<pre class="r"><code>simple_bay$coefficients</code></pre>
+<pre><code>##  (Intercept)       origin        strat origin:strat 
+##    0.1195663    0.4733534    0.5138164    0.2932629</code></pre>
+<p>These models accurately replicate our input values.</p>
+<p>Next, testing the model with <code>predcomps</code>:</p>
+<pre class="r"><code>require(predcomps)
+predcomp_origin&lt;-GetSingleInputApcs(simple_lm,fakex,u=&quot;origin&quot;,v=&quot;strat&quot;)
+predcomp_origin$PerUnitInput.Absolute</code></pre>
+<pre><code>## [1] 0.6199543</code></pre>
+<p>And now testing our method:</p>
+<pre class="r"><code>#First making a bayesian model: 
+  S&lt;-1000
+  n&lt;-nrow(fakex) 
+  newdat&lt;-fakex
+  newdat1&lt;-newdat
+  newdat1$origin&lt;-rep(1,n)
+  newdat0&lt;-newdat
+  newdat0$origin&lt;-rep(0,n)
+  E_u1&lt;-posterior_predict(simple_bay,newdata=newdat1,draws=S,seed=248) #each of these columns
+    #represents the expected value for a different value of nu; each row represents the 
+    #expected value according to a different model draw; each of these is for origin=1 
+  E_u0&lt;-posterior_predict(simple_bay,newdata=newdat0,draws=S,seed=248) # Now the same, but for origin=0
+  E_diff&lt;-((E_u1-E_u0)^2) #the squared difference, as in equation 6. 
+  sum_theta&lt;-colSums(E_diff) #summing across model draws 
+  sum_nu_theta&lt;-sum(sum_theta) #summing across nu
+  num&lt;-sum_nu_theta #this is the numerator in equation 6 
+  denom&lt;-S*n #this is the denominator in equation 6. 
+  (APC&lt;-(num/denom)^(1/2)) #this is the average predictive comparison </code></pre>
+<pre><code>## [1] 0.637118</code></pre>
+<p>The APC value from <code>predcomps</code> and from my method are very similar – any differences likely reflect differences between the Bayesian and frequentist models or the particular model draws used. Thus, my method seems accurate.</p>
 </div>
 <div id="conclusion" class="section level1">
 <h1>Conclusion</h1>
