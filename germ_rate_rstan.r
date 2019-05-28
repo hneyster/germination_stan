@@ -58,6 +58,8 @@ if (realdata==TRUE) {
   #putting all the data together: 
   datax <- data.frame(N=N, y=y, temp1=temp1, temp2=temp2, temp3=temp3 ,origin=origin, strat=strat,  
                       nsp=nsp, sp=sp, loc=loc, sfamily=sfamily)
+ # rate_data<-datax
+#  save(rate_data,file="rate_data.rdata")
 }
 
 ## fitting the stan model -------------------------------------------------

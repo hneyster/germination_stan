@@ -10,7 +10,8 @@ if(length(grep("Lizzie", getwd())>0)) {
   setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
 
 ##libraries
-library(rstan)
+library(plyr)
+library(rstan) #how to update rstan: https://discourse.mc-stan.org/t/updating-stan-from-r/3275 
 library(shinystan)
 library(lme4)
 library(ggplot2)
@@ -59,10 +60,31 @@ if (realdata==TRUE) {
   loc<-as.numeric(as.factor(data$loc))
   sfamily<-as.numeric(as.factor(data$uniqind))
   nsp <- length(unique(data$sp))
+  ##setting up censored data. Plants were not measured every day -- thus the germination timing data is censored. For 
+  #example, and observation of germiantion onf day 12 could have occued on day 11 or day 12, since the plot was 
+  #not measured since day 10. brms allows for censored data. To fit the syntax of brms, we must first add a column, 
+  #"censored" which tells weather the associated response observation is censored. A '2' in this column represents 
+  #@that the response observation is censored on an interval. All of our data is thus censored, so we'll fill this column
+  #with twos
+  censored<-as.numeric(rep(2,N))
+  #Next, we have to represent what interval each observation is censored on. In brms, this interval is open on the left
+  #and closed on the right. We'll call ther right bound "y_right" and the left bound is "y_right" Thus y_right=the 
+  #y defined above:
+  y_right<-y
+  #We will define y_left as the the lower, open bound. Because this bound is open, it will be the last observed date (when
+  #the seed was still ungerminated). Here are the days that observations occurred: 
+  obdays<-c(2,sort(unique(y_right))) #the first observation was carried out on day 2, but no germinations was recorded. All 
+  #other days had germination days recorded. 
+  prev_ob<-c(0,obdays[1:(length(obdays)-1)]) #this is the prior observation date 
+  prev_cur<-as.data.frame(cbind("y_left"=prev_ob,"y_right"=obdays))
+  yleft_yright<-join(x = as.data.frame(y_right),y=prev_cur)
+  y_left<-yleft_yright$y_left
   #putting all the data together: 
-  datax <- data.frame(N=N, log_y=log_y, y, temp1=temp1, temp2=temp2, temp3=temp3 ,origin=origin, strat=strat,  
+  datax <- data.frame(N=N, log_y=log_y, y,y_left,y_right,censored, temp1=temp1, temp2=temp2, temp3=temp3 ,origin=origin, strat=strat,  
                       nsp=nsp, sp=sp, loc=loc, sfamily=sfamily)
   #,nloc=nloc, nfamily=nfamily, loc=loc, family=family)
+  #time_data<-datax
+  #save(time_data,file="time_data.rdata")
 }
 
 ## fitting the stan model -------------------------------------------------
@@ -186,6 +208,69 @@ if (realdata==TRUE) {
                                     prior(cauchy(0, 10), "sd")),
                           control = list(adapt_delta = 0.95), chains=4, iter=2000)
    
+   #and finally, a censored model (4/25/19)
+   #first trying a simple one: 
+datax$censored_s<-ifelse(datax$y>60,2,0)
+datax$y_left_s<-ifelse(datax$censored_s==2,datax$y_left,datax$y_right)
+datax$y_right_s<-ifelse(datax$censored_s==2,datax$y_right,0)
+      cens_test<-brm(y_left_s|cens(censored_s, y_right_s) ~ temp1+temp2+temp3+origin+strat,
+                               data=datax, algorithm= "sampling", family=poisson,
+                               prior = c(prior(normal(3, 2), "Intercept")), chains=1, iter=200,inits = 0)
+      test<-brm(y_right ~ temp1+temp2+temp3+origin+strat,
+                     data=datax, algorithm= "sampling", family=poisson,
+                     prior = c(prior(normal(1, .5), "Intercept")), chains=1, iter=200,inits = 0)
+      
+# But it doesn't work. So let's create a minimal example 
+    require(rstan)
+    require(brms)
+    set.seed(101)
+    n <- 100
+    beta0 <- 1
+    beta1 <- 0.2
+    x <- runif(n=n, min=0, max=1.5)
+    mu <- exp(beta0 + beta1 * x)
+    y <- rpois(n=n, lambda=mu)
+    simdata <- data.frame(y=y, x=x)
+    glm(y~x, family='poisson' ,data=simdata)
+    
+    sim_mod<-brm(y ~ x, data=simdata, algorithm= "sampling", family=poisson,
+                                prior = c(prior(normal(1, .5), "Intercept")),
+                                chains=1, iter=200,inits = 0)
+    # This works. Now making censored: 
+    y_left<-ifelse(y>7,7,y)
+    simdata_cens<-data.frame(y_left=y_left, x=x)
+    simdata_cens$y_right<-ifelse(y_left==7,9,0)
+    simdata_cens$censored<-ifelse(simdata_cens$y_right==9,2,0)
+    
+    sim_mod_cens<-brm(y_left|cens(censored, y_right) ~ x, data=simdata_cens, algorithm= "sampling", family=poisson,
+                 prior = c(prior(normal(1, .5), "Intercept")),
+                 chains=1, iter=200,inits = 0)
+    #Now testing against using a non-censored model:
+    sim_mod<-brm(y_left ~ x, data=simdata_cens, algorithm= "sampling", family=poisson,
+                      prior = c(prior(normal(1, .5), "Intercept")),
+                      chains=1, iter=200,inits = 0)
+    pp_check(sim_mod)
+    pp_check(sim_mod_cens)
+    
+    #The censored model looks better. 
+    
+   mod_time_pois_brm_cens<-brm(y|cens(censored, y2) ~
+                                  origin + strat + temp1 + temp2 + temp3 +  
+                                  origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
+                                  strat:temp1 + strat:temp2 + strat:temp3 +
+                                  origin:strat:temp1 +  origin:strat:temp2 + origin:strat:temp3 + 
+                                  (1|sp/loc/sfamily) +
+                                  (origin -1|sp/loc/sfamily) + (strat -1|sp/loc/sfamily) + (temp1 -1|sp/loc/sfamily) + 
+                                  (temp2 -1|sp/loc/sfamily) +  (temp3 -1|sp/loc/sfamily)+
+                                  (origin:strat -1|sp/loc/sfamily) + (origin:temp1 -1|sp/loc/sfamily) + (origin:temp2 -1|sp/loc/sfamily) + 
+                                  (origin:temp3 -1|sp/loc/sfamily) +  (strat:temp1 -1|sp/loc/sfamily) + (strat:temp2 -1|sp/loc/sfamily) + 
+                                  (strat:temp3 -1|sp/loc/sfamily) + (origin:strat:temp1 -1|sp/loc/sfamily) + 
+                                  (origin:strat:temp2 -1|sp/loc/sfamily) + (origin:strat:temp3 -1|sp/loc/sfamily),
+                          data=germdata, algorithm= "sampling", family=poisson,
+                          prior = c(prior(normal(0, 10), "Intercept"),
+                                    prior(cauchy(0, 10), "sd")),
+                          control = list(adapt_delta = 0.95), chains=1, iter=200,inits = 0)
+   
   #and checking against lmer model:
    mod_rs_freq2<-lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 + 
                                   origin*strat + origin*temp1 + origin*temp2 + origin*temp3 + 
@@ -206,7 +291,7 @@ setwd("~/thesis/stan")
 load("mod_time_pois_brm.Rdata")
 load("mod_time_pois.Rdata")
 load("mod_time_pois_brm_nt.Rdata")
-my_sso <- launch_shinystan(mod_time_pois_brm, rstudio = getOption("shinystan.rstudio"))
+my_sso <- launch_shinystan(mod_time_pois_brm_cens, rstudio = getOption("shinystan.rstudio"))
 
 #checking the brms model: 
 samples <- posterior_samples(mod_time_pois_brm)
