@@ -29,56 +29,194 @@ library(forcats)
 #######
 #######
 
-#data
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois_brm.Rdata") #this is my brms stanfit object. 
+#model:
+load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois.Rdata") #this is my rstanarm  stanfit object.
+m<-mod_time_pois
+# This is an Rstanarm object. The coeffs have to be extracted.  There's probably a better way to do this, 
+#but I already had this code written up for something else, so used it again.
+sum.m <-
+  summary(
+    m,
+    pars = c(
+      "(Intercept)",
+      "origin",
+      "strat",
+      "temp1",
+      "temp2",
+      "temp3",
+      "origin:strat",
+      "origin:temp1",
+      "origin:temp2",
+      "origin:temp3",
+      "strat:temp1",
+      "strat:temp2",
+      "strat:temp3",
+      "origin:strat:temp1",
+      "origin:strat:temp2",
+      "origin:strat:temp3"
+      ,
+      "b[origin sp:1]",
+      "b[strat sp:1]",
+      "b[temp1 sp:1]",
+      "b[temp2 sp:1]",
+      "b[temp3 sp:1]",
+      "b[origin:strat sp:1]",
+      "b[origin:temp1 sp:1]",
+      "b[origin:temp2 sp:1]",
+      "b[origin:temp3 sp:1]",
+      "b[strat:temp1 sp:1]",
+      "b[strat:temp2 sp:1]",
+      "b[strat:temp3 sp:1]",
+      "b[origin:strat:temp1 sp:1]",
+      "b[origin:strat:temp2 sp:1]",
+      "b[origin:strat:temp3 sp:1]"
+      ,
+      "b[origin sp:2]",
+      "b[strat sp:2]",
+      "b[temp1 sp:2]",
+      "b[temp2 sp:2]",
+      "b[temp3 sp:2]",
+      "b[origin:strat sp:2]",
+      "b[origin:temp1 sp:2]",
+      "b[origin:temp2 sp:2]",
+      "b[origin:temp3 sp:2]",
+      "b[strat:temp1 sp:2]",
+      "b[strat:temp2 sp:2]",
+      "b[strat:temp3 sp:2]",
+      "b[origin:strat:temp1 sp:2]",
+      "b[origin:strat:temp2 sp:2]",
+      "b[origin:strat:temp3 sp:2]"
+      ,
+      "b[origin sp:3]",
+      "b[strat sp:3]",
+      "b[temp1 sp:3]",
+      "b[temp2 sp:3]",
+      "b[temp3 sp:3]",
+      "b[origin:strat sp:3]",
+      "b[origin:temp1 sp:3]",
+      "b[origin:temp2 sp:3]",
+      "b[origin:temp3 sp:3]",
+      "b[strat:temp1 sp:3]",
+      "b[strat:temp2 sp:3]",
+      "b[strat:temp3 sp:3]",
+      "b[origin:strat:temp1 sp:3]",
+      "b[origin:strat:temp2 sp:3]",
+      "b[origin:strat:temp3 sp:3]"
+      ,
+      "b[origin sp:4]",
+      "b[strat sp:4]",
+      "b[temp1 sp:4]",
+      "b[temp2 sp:4]",
+      "b[temp3 sp:4]",
+      "b[origin:strat sp:4]",
+      "b[origin:temp1 sp:4]",
+      "b[origin:temp2 sp:4]",
+      "b[origin:temp3 sp:4]",
+      "b[strat:temp1 sp:4]",
+      "b[strat:temp2 sp:4]",
+      "b[strat:temp3 sp:4]",
+      "b[origin:strat:temp1 sp:4]",
+      "b[origin:strat:temp2 sp:4]",
+      "b[origin:strat:temp3 sp:4]"
+      ,
+      "b[origin sp:5]",
+      "b[strat sp:5]",
+      "b[temp1 sp:5]",
+      "b[temp2 sp:5]",
+      "b[temp3 sp:5]",
+      "b[origin:strat sp:5]",
+      "b[origin:temp1 sp:5]",
+      "b[origin:temp2 sp:5]",
+      "b[origin:temp3 sp:5]",
+      "b[strat:temp1 sp:5]",
+      "b[strat:temp2 sp:5]",
+      "b[strat:temp3 sp:5]",
+      "b[origin:strat:temp1 sp:5]",
+      "b[origin:strat:temp2 sp:5]",
+      "b[origin:strat:temp3 sp:5]"
+      ,
+      "b[origin sp:6]",
+      "b[strat sp:6]",
+      "b[temp1 sp:6]",
+      "b[temp2 sp:6]",
+      "b[temp3 sp:6]",
+      "b[origin:strat sp:6]",
+      "b[origin:temp1 sp:6]",
+      "b[origin:temp2 sp:6]",
+      "b[origin:temp3 sp:6]",
+      "b[strat:temp1 sp:6]",
+      "b[strat:temp2 sp:6]",
+      "b[strat:temp3 sp:6]",
+      "b[origin:strat:temp1 sp:6]",
+      "b[origin:strat:temp2 sp:6]",
+      "b[origin:strat:temp3 sp:6]"
+      ,
+      "b[origin sp:7]",
+      "b[strat sp:7]",
+      "b[temp1 sp:7]",
+      "b[temp2 sp:7]",
+      "b[temp3 sp:7]",
+      "b[origin:strat sp:7]",
+      "b[origin:temp1 sp:7]",
+      "b[origin:temp2 sp:7]",
+      "b[origin:temp3 sp:7]",
+      "b[strat:temp1 sp:7]",
+      "b[strat:temp2 sp:7]",
+      "b[strat:temp3 sp:7]",
+      "b[origin:strat:temp1 sp:7]",
+      "b[origin:strat:temp2 sp:7]",
+      "b[origin:strat:temp3 sp:7]"
+    )
+  )
 
-m<-mod_time_pois_brm 
-sum.m<-summary(m) #summary of the object 
-cri.f<-as.data.frame(sum.m$fixed[,c("Estimate", "l-95% CI", "u-95% CI")]) #Extracting the global effects with CI
-cri.f<-cri.f[-1,] #removing the intercept 
-fdf1<-as.data.frame(rbind(as.vector(cri.f[,1]), as.vector(cri.f[,2]), as.vector(cri.f[,3]))) # Making into a dataframe 
-fdf2<-cbind(fdf1, c(0, 0, 0) , c("Estimate", "2.5%", "97.5%")) #adding zeros to denote that these are the global effects 
-names(fdf2)<-c(rownames(cri.f), "sp", "perc") #renaming 
+cri.f<-sum.m[c(2:121),c(1,4,8)] #just selecting the mean and 95% CI. Removing the intercept 
+fdf<-data.frame(cri.f)
+#binding 
+fdf2<-as.data.frame(
+  cbind(
+    (c(rownames(fdf)[1:15], rep(rev(rownames(fdf)[1:15]), each=7))), #stdarzing the parameter  names 
+    as.numeric(as.character(fdf$mean)),  # the estimate 
+    as.numeric(as.character(fdf$X2.5.)), #lower bound, 95% CI
+    as.numeric(as.character(fdf$X97.5.)),  #upper bound, 95% CI
+    as.numeric(c(rep(1, 15), rep(2, 105))),  # A variable to signify if the corresponding row is a fixed  or random effect. 1=global, 2=rndm
+    as.numeric( c(rep(0,15), rep(seq(1:7),15 ))))) #sp variable. Zero when a factor 
 
-cri.r<-(ranef(m, summary = TRUE, robust = FALSE,
-     probs = c(0.025, 0.975)))$sp   #extracting the random effects 
-cri.r2<-cri.r[, ,-1] #removing the intercept 
-cri.r2<-cri.r2[,-2,] #removing the est error
-dims<-dim(cri.r2)
-twoDimMat <- matrix(cri.r2, prod(dims[1:2]), dims[3]) #converting to matrix 
-mat2<-cbind(twoDimMat, c(rep(1:7, length.out=21)), rep(c("Estimate", "2.5%", "97.5%"), each=7)) #adding a species column 
-df<-as.data.frame(mat2)
-names(df)<-c(rownames(cri.f), "sp", "perc") #renaming 
-dftot<-rbind(fdf2, df) #combining  fixed effects and random effects 
-dflong<- gather(dftot, var, value, origin:`origin:strat:temp3`, factor_key=TRUE) #converting to long format
+names(fdf2)<-c("var", "Estimate", colnames(cri.f)[c(2,3)], "rndm", "sp") #renaming. 
 
-#adding the fixed effect  estiamtes to the random effect values 
-for (i in seq(from=1,to=nrow(dflong), by=24)) {
-  for (j in seq(from=3, to=23, by=1)) {
-    dflong$value[i+j]<- as.numeric(dflong$value[i+j]) + as.numeric(dflong$value[i])
-  }
-}
-dflong$rndm<-ifelse(dflong$sp>0, 2, 1) #adding a new column that signifies weather a coeff is a fixed or a random effect 
-dfwide<-spread(dflong, perc, value) #widening it a bit
-dfwide[,4:6] <- as.data.frame(lapply(c(dfwide[,4:6]), as.numeric )) #making numeric 
-dfwide$sp<-as.factor(dfwide$sp) 
+fdf2$Estimate<-as.numeric(fdf2$Estimate)      
+fdf2$`2.5%`<-as.numeric(fdf2$`2.5%`)
+fdf2$`97.5%`<-as.numeric(fdf2$`97.5%`)      
+
+
+#Fixed effect estimates:
+fixed<-c(rep(0, 15), rep(as.numeric(rev(fdf2[c(1:15),2])), each=7))
+dff<-fdf2
+
+#adding the fixef estiamtes to the random effect values:
+dff$Estimate<-fdf2$Estimate+fixed
+dff$`2.5%`<-fdf2$`2.5%`+fixed
+dff$`97.5%`<-fdf2$`97.5%`+fixed
+
+dff$var <- fct_inorder(dff$var) #so that the categorical variables plot in the right order 
+
 ## plotting
 
-pd <- position_dodgev(height = -0.5) #the negative here makes it so the fixed effects are plotted above the others 
+pd <- position_dodgev(height = -0.5)
 
 
-fig1 <-ggplot(dfwide, aes(x=Estimate, y=var, color=factor(sp), size=factor(rndm), alpha=factor(rndm)))+
+fig1<-ggplot(dff, aes(x=Estimate, y=var, color=factor(sp), size=factor(rndm), alpha=factor(rndm)))+
   geom_point(position =pd, size=4)+
   geom_errorbarh(aes(xmin=(`2.5%`), xmax=(`97.5%`)), position=pd, size=.5, height =0)+
   geom_vline(xintercept=0)+
   scale_colour_manual(labels = c("Fixed effects", "CAPBUR", "CHEMAJ", "DACGLO", "PLALAN", "PLAMAJ", "RUMCRI", "TAROFF"),
-                      values=c("blue", "red", "orangered1", "sienna4", "green4", "green1", "purple2", "magenta2"))+
+                      values=c("blue", "red", "orangered1", "sienna4", "green4", "green1", "purple2", "magenta2"))+  scale_alpha_manual(values=c(1, 0.5))+
   scale_shape_manual(labels="", values=c("1"=16,"2"=16))+
   scale_alpha_manual(values=c(1, 0.5))+
   guides(alpha=FALSE) + #removes the legend 
-  ggtitle(label = "Days to Germination")+ 
-  scale_y_discrete(limits = rev(unique(sort(dfwide$var)))) #reverses the y axis 
-#pdf(file.path(figpath, "Fig1.pdf"), width = 7, height = 8)
+  ggtitle(label = "Germination day")+
+  scale_y_discrete(limits = rev(unique(sort(dff$var))))+
+  theme(legend.title = element_blank())
+#pdf(file.path(figpath, "Fig2.pdf"), width = 7, height = 8)
 fig1
 #dev.off()
 
@@ -271,7 +409,8 @@ fig2<-ggplot(dff, aes(x=Estimate, y=var, color=factor(sp), size=factor(rndm), al
   scale_alpha_manual(values=c(1, 0.5))+
   guides(alpha=FALSE) + #removes the legend 
   ggtitle(label = "Germination rate")+
-  scale_y_discrete(limits = rev(unique(sort(dff$var))))
+  scale_y_discrete(limits = rev(unique(sort(dff$var))))+
+  theme(legend.title = element_blank())
 #pdf(file.path(figpath, "Fig2.pdf"), width = 7, height = 8)
 fig2
 #dev.off()
@@ -465,19 +604,21 @@ fig3<-ggplot(dff, aes(x=Estimate, y=var, color=factor(sp), size=factor(rndm), al
   scale_alpha_manual(values=c(1, 0.5))+
   guides(alpha=FALSE) + #removes the legend 
   ggtitle(label = "Growth rate")+
-  scale_y_discrete(limits = rev(unique(sort(dff$var))))
+  scale_y_discrete(limits = rev(unique(sort(dff$var))))+
+  theme(legend.title = element_blank())
 #pdf(file.path(figpath, "Fig3.pdf"), width = 7, height = 8)
 fig3
 #dev.off()
 
 #saving the files: 
 
-#png(file.path("Eyster_figs.png"), width = 7, height = 24, units="in", res=200)
-#multiplot(fig1, fig2, fig3)
+#png(file.path("germ_figs.png"), width = 7, height = 24, units="in", res=700)
+#multiplot(fig1, fig2, fig3, cols=3)
+#multiplot(fig2, fig1+theme(legend.position="none", axis.text.y=element_blank()))
 #dev.off()
-#pdf("Eyster_figs.pdf")
+#pdf("germ_figs.pdf")
 #fig1
 #fig2
-#ig3
+#fig3
 #dev.off()
 #save(fig1, fig2, fig3, file = "thesis_plots_raneff.Rdata")

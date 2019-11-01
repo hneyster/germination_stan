@@ -28,20 +28,18 @@ apc<-function(mod,u,df,type = c("binary","numerical", "categorical")){
     #represents the expected value for a different value of nu; each row represents the 
     #expected value according to a different model draw; each of these is for upsilon=1 
     E_u0<-posterior_predict(mod,newdata=newdf0,draws=S,seed=248) # Now the same, but for upsilon=0
-    sample_draws<-sample(1:S,1000)
-    E_u1<-E_u1[sample_draws,] 
-    E_u0<-E_u0[sample_draws,]
-    E_u1<-ifelse(E_u1<134, E_u1,NA) 
-    E_u0<-ifelse(E_u0<134, E_u0,NA)
+    #sample_draws<-sample(1:S,1000)
+    #E_u1<-E_u1[sample_draws,] 
+    #E_u0<-E_u0[sample_draws,]
     E_diff<-((E_u1-E_u0)^2) #the squared difference, as in equation 6. 
-    sum_theta<-colSums(E_diff, na.rm=TRUE) #summing across model draws 
-    sum_nu_theta<-sum(sum_theta,na.rm = TRUE) #summing across nu
+    sum_theta<-colSums(E_diff) #summing across model draws 
+    sum_nu_theta<-sum(sum_theta) #summing across nu
     num<-sum_nu_theta #this is the numerator in equation 6 
     denom<-S*n #this is the denominator in equation 6. 
     APC<-(num/denom)^(1/2) #this is the average predictive comparison 
     
     #now calculating the stadard error
-    sum_nu<-rowSums(E_diff,na.rm = TRUE)/n
+    sum_nu<-rowSums(E_diff)/n
     apc_vec<-rep(APC^2,S) # a vector of apc 
     SE<-(1/(2*APC))*(sqrt(1/(S-1)*(sum  ((sum_nu-apc_vec)^2)  ))) #The standard error
     #return(paste('APC =',APC, ', SE = ',SE))
@@ -66,17 +64,15 @@ apc<-function(mod,u,df,type = c("binary","numerical", "categorical")){
     sample_draws<-sample(1:S,1000)
     E_u1<-E_u1[sample_draws,] 
     E_u0<-E_u0[sample_draws,]
-    E_u1<-ifelse(E_u1<134, E_u1,NA) 
-    E_u0<-ifelse(E_u0<134, E_u0,NA)
     E_diff<-((E_u1-E_u0)^2)
-    sum_theta<-colSums(E_diff, na.rm=TRUE) #summing across model draws 
-    sum_nu_u_theta<-sum(sum_theta, na.rm=TRUE)
+    sum_theta<-colSums(E_diff) #summing across model draws 
+    sum_nu_u_theta<-sum(sum_theta)
     num<-sum_nu_u_theta
     denom<-S*n*K
     APC<-(num/denom)^(1/2)
     
     #now calculating SE: 
-    sum_nu_u<-rowSums(E_diff,na.rm=TRUE)/(n*K)
+    sum_nu_u<-rowSums(E_diff)/(n*K)
     apc_vec<-rep(APC^2,S) # a vector of apc 
     SE<-(1/(2*APC))*(sqrt(1/(S-1)*(sum  ((sum_nu_u-apc_vec)^2)  ))) #The standard error
     #return(paste('APC =',APC, ', SE = ',SE))
@@ -112,11 +108,11 @@ ge_sp<-apc(mod_rate,"sp",rate_data,type="categorical")
 #### APCs for germ timing model ###
 ###################################
 
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois_brm.Rdata") #this is a brms stanfit object. 
+load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois.Rdata") #this is a brms stanfit object. 
 load("C:/Users/Owner/Documents/github/germination_stan/time_data.rdata") 
-t_o<-apc(mod_time_pois_brm,"origin",time_data,type = "binary")
+t_o<-apc(mod_time_pois,"origin",time_data,type = "binary")
 t_s<-apc(mod_time_pois,"strat",time_data,type = "binary")
-t_sp<-apc(mod_time_pois_brm, "sp", time_data, type="categorical")
+t_sp<-apc(mod_time_pois, "sp", time_data, type="categorical")
 
 #################################
 ### Making a table #############
@@ -141,17 +137,17 @@ print(xtable(table1),tabular.environment = "longtable",include.rownames = TRUE, 
 
 ## ARCHIVE 
 
-u1.500<-(which(E_u1>250,arr.ind = TRUE))
-E.70<-which(E>80, arr.ind = TRUE)
-u0.500<-(which(E_u0>250, arr.ind = TRUE))
-u1nr<-posterior_predict(mod,newdf1, re.form=NA)
-ppc_dens_overlay(y=time_data$y, yrep = E_u1) +xlim(0,100)
-pdf(file="time_mod_ppchecks.pdf")
-ppc_dens_overlay(y=time_data$y, yrep=posterior_predict(mod_time_pois,time_data))+xlim(0,80) + ggtitle("rstanarm")
-ppc_dens_overlay(y=time_data$y, yrep=posterior_predict(mod_time_pois_brm_nt,time_data))+xlim(0,80) + ggtitle("brms")
-ppc_dens_overlay(y=time_data$y, yrep=posterior_predict(mod_time_pois_brm,time_data))+xlim(0,80) + 
-  ggtitle("brms with truncation")
-dev.off()
+# u1.500<-(which(E_u1>250,arr.ind = TRUE))
+# E.70<-which(E>80, arr.ind = TRUE)
+# u0.500<-(which(E_u0>250, arr.ind = TRUE))
+# u1nr<-posterior_predict(mod,newdf1, re.form=NA)
+# ppc_dens_overlay(y=time_data$y, yrep = E_u1) +xlim(0,100)
+# pdf(file="time_mod_ppchecks.pdf")
+# ppc_dens_overlay(y=time_data$y, yrep=posterior_predict(mod_time_pois,time_data))+xlim(0,80) + ggtitle("rstanarm")
+# ppc_dens_overlay(y=time_data$y, yrep=posterior_predict(mod_time_pois_brm_nt,time_data))+xlim(0,80) + ggtitle("brms")
+# ppc_dens_overlay(y=time_data$y, yrep=posterior_predict(mod_time_pois_brm,time_data))+xlim(0,80) + 
+#   ggtitle("brms with truncation")
+# dev.off()
 
 
 # ppc_dens_overlay(y = datax$y,
@@ -159,8 +155,8 @@ dev.off()
 # ppc_dens_overlay(y = datax$y,
 #                  yrep = E_u0) + xlim(0,100)
 # 
- load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois_brm_nt.Rdata")
- load("C:/Users/owner/documents/thesis/stan/mod_time_pois.Rdata")
+# load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois_brm_nt.Rdata")
+# load("C:/Users/owner/documents/thesis/stan/mod_time_pois.Rdata")
 # pp<-posterior_predict(mod_time_pois_brm)
 # pp_s<-as.data.frame(pp[10:20,])
 # ppg<-posterior_predict(mod_gr,draws=4000)

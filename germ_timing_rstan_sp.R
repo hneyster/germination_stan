@@ -140,7 +140,7 @@ if (realdata==TRUE) {
                     prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=2000)
    
    # model 4: now trying Poisson error distribution: 
-   
+   ## THis is the model used in the paper!!
    mod_time_pois<-stan_glmer(y ~ origin + strat + temp1 + temp2 + temp3 + 
                                origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
                                strat:temp1 + strat:temp2 + strat:temp3 +
@@ -205,9 +205,9 @@ if (realdata==TRUE) {
                             (origin:strat:temp2 -1|sp/loc/sfamily) + (origin:strat:temp3 -1|sp/loc/sfamily),
                           data=germdata, algorithm= "sampling", family=poisson,
                           prior = c(prior(normal(0, 10), "Intercept"),
-                                    prior(cauchy(0, 10), "sd")),
-                          control = list(adapt_delta = 0.95), chains=4, iter=2000)
-   
+                                    prior(cauchy(0, 5), "sd")),
+                         chains=4, iter=500)
+   #save(mod_time_pois_brm_nt_5, file="mod_time_pois_brm_nt_5.Rdata") # this is with prior(cauchy(0, 5), "sd"))
    #and finally, a censored model (4/25/19)
    #first trying a simple one: 
 datax$censored_s<-ifelse(datax$y>60,2,0)
