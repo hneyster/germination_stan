@@ -314,22 +314,14 @@ $(document).ready(function () {
 </div>
 
 
-<div id="situation" class="section level4">
-<h4>Situation:</h4>
-<p>Average predictive comparisons are a good way to interpret complex models</p>
-</div>
-<div id="complication" class="section level4">
-<h4>Complication:</h4>
-<p>It’s hard to implement this method, and the difference between this method and average marginal effects is unclear.</p>
-</div>
-<div id="question" class="section level4">
-<h4>Question:</h4>
-<p>Can implementing Average Predictive Comparisons be made accessible and intelligible relative to other methods?</p>
-</div>
-<div id="answer" class="section level4">
-<h4>Answer:</h4>
-<p>Let’s implement it in R!</p>
-</div>
+<!-- #### Situation: -->
+<!-- Average predictive comparisons are a good way to interpret complex models  -->
+<!-- #### Complication:  -->
+<!-- It's hard to implement this method, and the difference between this method and average marginal effects is unclear.  -->
+<!-- #### Question: -->
+<!-- Can implementing Average Predictive Comparisons be made accessible and intelligible relative to other methods?  -->
+<!-- #### Answer: -->
+<!-- Let's implement it in R!  -->
 <div id="what-are-average-predictive-comparisons" class="section level3">
 <h3>What are Average Predictive Comparisons?</h3>
 <p>Average Predictive Comparisons can increase interpretability of variables in complex (e.g., hierarchical and interactive) models. Gelman and Pardoe <a href="http://www.stat.columbia.edu/~gelman/research/published/ape17.pdf">(2007)</a> presented the theoretical argument for their efficacy, but there are no easily accessible implementations. There is an R package <a href="https://dchudz.github.io/predcomps/">(predcomps)</a> developed by David Chudzicki in 2014, but is only suited for a few model types (e.g., lm ), doesn’t allow unorderd categorical inputs, does not provide uncertainty estimates, and does not appear to be under any further development.</p>
@@ -567,7 +559,7 @@ marg(mod3,'origin', type='effects')</code></pre>
 </div>
 <div id="comparing-to-predcomps" class="section level3">
 <h3>Comparing to predcomps</h3>
-<p>How does our result compare to the <code>predcomps</code> package? This package only works or numerical, ordered, or binary inputs. It also only works for linear models. So we’ll have to simplify our model a good deal in order to compar this method. Such a simple model cannot satisfactorally model our real data, so we’ll first simulate some simpler data:</p>
+<p>How does our result compare to the <code>predcomps</code> package? This package only works or numerical, ordered, or binary inputs. It also only works for linear models. So we’ll have to simplify our model a good deal in order to compare this method. Such a simple model cannot satisfactorily model our real data, so we’ll first simulate some simpler data:</p>
 <pre class="r"><code>set.seed(100)
 nind=n
 norigin = 2 
@@ -647,11 +639,56 @@ predcomp_origin$PerUnitInput.Absolute</code></pre>
   denom&lt;-S*n #this is the denominator in equation 6. 
   (APC&lt;-(num/denom)^(1/2)) #this is the average predictive comparison </code></pre>
 <pre><code>## [1] 0.637118</code></pre>
-<p>The APC value from <code>predcomps</code> and from my method are very similar – any differences likely reflect differences between the Bayesian and frequentist models or the particular model draws used. Thus, my method seems accurate.</p>
+<p>The APC value from <code>predcomps</code> and from my method are very similar, but differences remain. Is our method or <code>predcomps</code> missing something? Luckily, because we used simulated data, we can directly use simulation to find out what the “real” APC value is.</p>
+<p>First we have to simulate some new data, this time setting the effects of <code>origin</code> to zero:</p>
+<pre class="r"><code>set.seed(100)
+nind=n
+norigin = 2 
+nstrat = 2
+rep = round((nind/(norigin*nstrat)), digits=0) 
+ntot = norigin*nstrat*rep
+
+# Build up the data frame
+origin = as.numeric(as.character(gl(norigin, rep, length = ntot, labels=c(0,1))))
+strat = as.numeric(as.character(gl(nstrat, rep*norigin, length = ntot, c(0,1))))
+treatcombo = paste( origin, strat, sep = &quot;_&quot;)
+d &lt;- data_frame( origin, strat, treatcombo)
+
+###### Set up differences for each level
+origindiff = 0
+stratdiff = 0.5
+
+######## SD for each treatment
+origindiff.sd = 0
+stratdiff.sd = 0.05
+
+# interactions. 1 two-way interactions
+originstrat = 0 # 
+originstrat.sd = 0 # 
+
+mm &lt;- model.matrix(~(origin+strat)^2, data.frame(origin, strat))
+baseinter = .12 # baseline intercept
+
+  coeff &lt;- c(baseinter, 
+             rnorm(1, origindiff, origindiff.sd), 
+             rnorm(1, stratdiff, stratdiff.sd),
+             rnorm(1, originstrat, originstrat.sd)
+  )
+  
+  bb &lt;- rnorm(n = length(origin), mean = mm %*% coeff, sd = 0.1)
+  
+  fakex2 &lt;- data.frame(y=bb,  origin, strat)</code></pre>
+<p>Then we compare the first dataset to this new dataset, but only looking at the data when <code>origin</code>=1. Note that because every response in the first dataset is bigger than in the second, we don’t have to take the squared difference and then take the square root at the end. Using this simulated data, an Average predictive Comparison comes down to the following:</p>
+<pre class="r"><code>APC_sim&lt;-(fakex[fakex$origin==1,]$y-fakex2[fakex2$origin==1,]$y) %&gt;% mean()
+APC_sim</code></pre>
+<pre><code>## [1] 0.6378541</code></pre>
+<pre class="r"><code>APC_sim-APC</code></pre>
+<pre><code>## [1] 0.0007360966</code></pre>
+<p>We can now see that our APC method is nearly identical to the simulated method, and that our method is more accurate than <code>predcomps</code>. Thus, we can be quite confident that our method reliably produces the real APC values.</p>
 </div>
 <div id="conclusion" class="section level1">
 <h1>Conclusion</h1>
-<p>Average Predictive Comparisons offer a powerful method for interpreting complex models. They offer 2 benfits over Average Marginal Effects: 1) they account for the correlation of input variables and 2) offer a simpler standard error calculation. Due to their capacity to directly utilize model uncertainty, they are especiallly well-suited for Bayesian models. Here, I have demonstrated their applicability to a hierachical mixed-effect model, and shown the utility of the result. APCs should become more widelly used to interpret complex Bayesian models. I hope that this illustration can serve as a guide for future attempts.</p>
+<p>Average Predictive Comparisons offer a powerful method for interpreting complex models. They offer 2 benefits over Average Marginal Effects: 1) they account for the correlation of input variables and 2) offer a simpler standard error calculation. Due to their capacity to directly utilize model uncertainty, they are especially well-suited for Bayesian models. Here, I have demonstrated their applicability to a hierarchical mixed-effect model, and shown the utility of the result. APCs should become more widely used to interpret complex Bayesian models. I hope that this illustration can serve as a guide for future attempts.</p>
 </div>
 
 
