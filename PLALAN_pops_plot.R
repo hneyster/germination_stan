@@ -21,7 +21,7 @@ library(RColorBrewer)
 source("http://peterhaschke.com/Code/multiplot.R") #so that the multiplot function works 
 source("https://raw.githubusercontent.com/jaredlander/coefplot/master/R/position.r") # for vertical dodging 
 
-print<-TRUE
+print<-FALSE
 
 
 ####### Germination rate:
@@ -38,6 +38,7 @@ data<-rate_data
 ## PLALAN is species 4,
 # locations for PLALAN: 
 locs<-data[data$sp==4 ,"loc"] %>% unique() %>% sort()
+# rate_data %>% group_by(origin) %>% summarise(uniqueloc = n_distinct(sfamily))
 
 # location index: 
 load("C:/Users/Owner/Documents/GitHub/germination_stan/germs.Rdata") #cleaned and processed real data
@@ -391,8 +392,8 @@ getPalette = colorRampPalette(brewer.pal(13, "Set1"))
 
 locs_names<-loc_index[loc_index$loc %in% locs,]
 locs_names<-locs_names[order(as.numeric(as.character(locs_names$loc))),]
-locs_names$short <-c("N. France", "Denmark", "S. Slovenia", "S. France", "Austria (high altitude)", "E. Switzerland",
-                     "Germany", "N. Slovenia", "C. Switzerland", "Netherlands", "Austria (low altitude)",
+locs_names$short <-c("N. France", "Denmark", "S. Slovenia", "S. France", "Austria (high altitude)", "Switzerland",
+                     "Germany", "N. Slovenia", "Liechtenstein", "Netherlands", "Austria (low altitude)",
                      "USA--Boston", "USA--Concord")
 
 fig3<-ggplot(dff, aes(x=Estimate, y=var, color=factor(as.numeric(loc)), size=factor(rndm), alpha=factor(rndm)))+
@@ -419,7 +420,7 @@ if(print==TRUE){
 
 ### Climate data ### 
 clim_raw<-read.csv("avgtemps.csv")
-clim<-merge(clim, locs_names, by.x="loc_name", by.y="V1", all = FALSE) ## just the locs with PLALAN in them
+clim<-merge(clim_raw, locs_names, by.x="loc_name", by.y="V1", all = FALSE) ## just the locs with PLALAN in them
 names(clim)[7] <- "loc_num"
 pd2<- -.2
  
@@ -447,11 +448,10 @@ fig5<-  ggplot(data=clim) +
   geom_point(position=position_dodge(-.3),aes(x=3, y=clim$May, color=factor(as.numeric(clim$loc_num))), size=8, shape=16, alpha=al)+
   scale_color_manual(labels=clim$short, values=getPalette(nrow(clim)))+
   scale_x_continuous(breaks=c(1,2,3), labels=c("Mar","Apr","May")) + 
-  ylab("Mean temperature (C)")+
+  ylab(expression(paste("Mean temperature 1970-2000 (",~degree*C,")")))+
   xlab("Month")+
   theme(legend.title = element_blank()) 
 
-#Making it easier to differentiate continents: 
 al<-.5
 fig6<-  ggplot(data=clim) + 
   geom_point(position=position_dodge(-.2), aes(y=clim$Apr, x=1, color=factor(as.numeric(clim$loc_num))), size=8, shape=16,alpha=al)+
