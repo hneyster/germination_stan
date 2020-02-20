@@ -108,7 +108,7 @@ table1<-as.data.frame(rbind(
 
 names(table1)<-c("origin", "stratification", "temperature 1", "temperature 2","temperature 3",
                  "species", "population", "PLALAN population")
-row.names(table1)<-c("germination rate (%)", "germination date (days)", "growth rate (cm/day)")
+row.names(table1)<-c("germination rate (fraction)", "germination date (days)", "growth rate (cm/day)")
 table_t<-t(table1)
 print(xtable(table_t),tabular.environment = "longtable",include.rownames = TRUE, floating = FALSE, 
       sanitize.text.function = identity)
