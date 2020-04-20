@@ -18,8 +18,8 @@ library(tidyr)
 library(RCurl)
 library(forcats)
 library(RColorBrewer)
-source("http://peterhaschke.com/Code/multiplot.R") #so that the multiplot function works 
-source("https://raw.githubusercontent.com/jaredlander/coefplot/master/R/position.r") # for vertical dodging 
+source("multiplot.r") #http://peterhaschke.com/Code/multiplot.R") #so that the multiplot function works 
+source("position.r") #https://raw.githubusercontent.com/jaredlander/coefplot/master/R/position.r") # for vertical dodging 
 
 print<-FALSE
 
@@ -412,7 +412,7 @@ fig3<-ggplot(dff, aes(x=Estimate, y=var, color=factor(as.numeric(loc)), size=fac
   theme(axis.text.y = element_blank())
 
 if(print==TRUE){
-  png(filename = "PLALAN_pops_plot.png", width = 14, height= 10, units = "in", res = 600)
+  pdf(file = "PLALAN_pops_plot.pdf", width = 14, height= 10)
   multiplot(fig1,fig2,fig3, cols=3)
   dev.off()
 }
