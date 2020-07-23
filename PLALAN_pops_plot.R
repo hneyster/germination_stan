@@ -1,5 +1,6 @@
 #Code to plot population-variation for germination rate, time, and growth rate for a single species, PLALAN
 #Written by Harold Eyster 1/19/20
+# adapted 7/22/20 with flipped axes 
 
 ## housekeeping
 rm(list=ls()) 
@@ -23,17 +24,19 @@ source("position.r") #https://raw.githubusercontent.com/jaredlander/coefplot/mas
 
 print<-FALSE
 
-
+### Loading models: 
+load("/home/harold/Dropbox/gitfiles/germ/mod_time_pois.rdata") #this is my rstanarm  stanfit object.
+load("/home/harold/Dropbox/gitfiles/germ/mod_rate.rdata") #this nd the next models are  rstanarm stanfit objects
+load("/home/harold/Dropbox/gitfiles/germ/mod_gr.rdata")
 ####### Germination rate:
 #######
 #######
 
 #model:
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_rate.Rdata") #this is my rstanarm  stanfit object.
 m<-mod_rate
 
 # model data: 
-load("C:/Users/Owner/Documents/github/germination_stan/rate_data.rdata") 
+load("/home/harold/github/germination_stan/rate_data.rdata") 
 data<-rate_data
 ## PLALAN is species 4,
 # locations for PLALAN: 
@@ -41,7 +44,7 @@ locs<-data[data$sp==4 ,"loc"] %>% unique() %>% sort()
 # rate_data %>% group_by(origin) %>% summarise(uniqueloc = n_distinct(sfamily))
 
 # location index: 
-load("C:/Users/Owner/Documents/GitHub/germination_stan/germs.Rdata") #cleaned and processed real data
+load("/home/harold/github/germination_stan/germs.Rdata") #cleaned and processed real data
 germs.y<-(subset(germs, germinated==1 & sp!="PLAMED" &  sp!="PLACOR"))    #just the data from seeds that germianted, and taking out the congenerics
 loc<-as.numeric(as.factor(germs.y$loc))
 loc_index <- cbind(germs.y$loc, loc) %>% as.data.frame() %>% unique() 
@@ -73,7 +76,7 @@ for (i in locs){
 #but I already had this code written up for something else, so used it again.
 
 sum.m <-
-  summary(
+  summary(probs=c(0.025,0.975),
     m,
     pars = c(
       "b[origin sp:4]",
@@ -97,7 +100,7 @@ sum.m <-
     )
   )
 
-cri.f<-sum.m[,c(1,4,8)] #just selecting the mean and 95% CI.
+cri.f<-sum.m[,c(1,4,5)] #just selecting the mean and 95% CI.
 cri.f_reorder<-cri.f[c(196:210,1:195),] # reording so global plalan is first 
 fdf<-data.frame(cri.f_reorder)
 #binding 
@@ -126,29 +129,43 @@ dff$Estimate<-fdf2$Estimate+plalan
 dff$`2.5%`<-fdf2$`2.5%`+plalan
 dff$`97.5%`<-fdf2$`97.5%`+plalan
 
-dff$var <- fct_inorder(dff$var) #so that the categorical variables plot in the right order 
+dff$var <- fct_inorder(dff$var) %>% fct_rev() #so that the categorical variables plot in the right order 
 dff$var2 <- rev(levels(dff$var))
+dff$rndm <- fct_rev(dff$rndm) 
+
+dff<-dff[c(16:nrow(dff), 1:15),] # so that the main effects plot on top 
+
 ## plotting
 
-pd <- position_dodgev(height = -0.5)
+pd <- position_dodge(width =  0.5)
+
+var_names <-c("origin","strat","temp1" ,"temp2","temp3","origin × strat","origin × temp1","origin × temp2","origin × temp3",
+              "strat × temp1", "strat × temp2","strat × temp3","origin × strat × temp1", "origin × strat × temp2",
+              "origin × strat × temp3")
 getPalette = colorRampPalette(brewer.pal(13, "Set1"))
 
 locs_names<-loc_index[loc_index$loc %in% locs,]
 locs_names<-locs_names[order(as.numeric(as.character(locs_names$loc))),]
+locs_names$V1[5] <- "Europe--Just below Enzianhutte, \n above Zell Am See, Austria"
 
-fig1<-ggplot(dff, aes(x=Estimate, y=var, color=factor(as.numeric(loc)), size=factor(rndm), alpha=factor(rndm)))+
-  geom_point(position =pd, size=4)+
-  geom_errorbarh(aes(xmin=(`2.5%`), xmax=(`97.5%`)), position=pd, size=.5, height =0)+
-  geom_vline(xintercept=0)+
-  scale_colour_manual(labels =c("PLALAN_global", locs_names$V1),
-                      values=c("red", getPalette(13)))+ 
-  scale_alpha_manual(values=c(1, 0.5))+
-  scale_shape_manual(labels="", values=c("1"=16,"2"=16))+
-  scale_alpha_manual(values=c(1, 0.5))+
-  guides(alpha=FALSE) + #removes the legend 
-  ggtitle(label = "Germination rate")+
-  scale_y_discrete(limits = (unique(sort(dff$var))))+
-  theme(legend.position = "none")
+fig1<-ggplot(dff, aes(y=Estimate, x=var, color=factor(as.numeric(loc)), size=(rndm), alpha=(rndm)))+
+  geom_errorbar(aes(ymin=(`2.5%`), ymax=(`97.5%`)), position=pd, size=.8, width =0)+
+  geom_point(position =pd)+
+  geom_hline(yintercept=0)+
+  scale_colour_manual(labels =c("PLALAN global mean", locs_names$V1),
+                      values=c("gray48", getPalette(13)))+ 
+  scale_size_discrete(range=c(4,6))+
+  scale_alpha_discrete(range=c(.5,1))+ #(values=c(rep(0.2,7), 1))+
+  guides(alpha=FALSE, size=FALSE) + #removes the legend 
+  ggtitle(label = "a) Germination rate")+
+  scale_x_discrete(labels = var_names)+
+  labs(x="", y= "logit (fraction)")+
+  theme(legend.position = "none")+
+  theme_bw(12)+
+  theme(axis.text.x = element_blank())+
+  theme(plot.margin = unit(c(.1, .1, .1, .1), "cm"))+
+  theme(legend.title = element_blank())+
+  guides(color=FALSE)
 
 #pdf(file.path(figpath, "Fig2.pdf"), width = 7, height = 8)
 #fig1
@@ -156,16 +173,15 @@ fig1<-ggplot(dff, aes(x=Estimate, y=var, color=factor(as.numeric(loc)), size=fac
 
 
 ## Germiantion date 
-#model:
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois.Rdata") #this is my rstanarm  stanfit object.
 # model data: 
-load("C:/Users/Owner/Documents/github/germination_stan/time_data.rdata") 
+load("/home/harold/github/germination_stan/time_data.rdata") 
+data<-time_data
 ## PLALAN is species 4,
 # locations for PLALAN: 
 locs<-time_data[time_data$sp==4 ,"loc"] %>% unique() %>% sort()
 
 # location index: 
-load("C:/Users/Owner/Documents/GitHub/germination_stan/germs.Rdata") #cleaned and processed real data
+load("/home/harold/github/germination_stan/germs.Rdata") #cleaned and processed real data
 germs.y<-(subset(germs, germinated==1 & sp!="PLAMED" &  sp!="PLACOR"))    #just the data from seeds that germianted, and taking out the congenerics
 loc<-as.numeric(as.factor(germs.y$loc))
 loc_index <- cbind(data$loc, loc) %>% as.data.frame() %>% unique() 
@@ -199,7 +215,7 @@ m<-mod_time_pois
 #but I already had this code written up for something else, so used it again.
 
 sum.m <-
-  summary(
+  summary(probs=c(0.025,0.975),
     m,
     pars = c(
       "b[origin sp:4]",
@@ -223,7 +239,7 @@ sum.m <-
     )
   )
 
-cri.f<-sum.m[,c(1,4,8)] #just selecting the mean and 95% CI.
+cri.f<-sum.m[,c(1,4,5)] #just selecting the mean and 95% CI.
 cri.f_reorder<-cri.f[c(196:210,1:195),] # reording so global plalan is first 
 fdf<-data.frame(cri.f_reorder)
 #binding 
@@ -252,31 +268,44 @@ dff$Estimate<-fdf2$Estimate+plalan
 dff$`2.5%`<-fdf2$`2.5%`+plalan
 dff$`97.5%`<-fdf2$`97.5%`+plalan
 
-dff$var <- fct_inorder(dff$var) #so that the categorical variables plot in the right order 
+dff$var <- fct_inorder(dff$var) %>% fct_rev() #so that the categorical variables plot in the right order 
 dff$var2 <- rev(levels(dff$var))
+dff$rndm <- fct_rev(dff$rndm) 
+
+dff<-dff[c(16:nrow(dff), 1:15),] # so that the main effects plot on top 
+
 ## plotting
 
-pd <- position_dodgev(height = -0.5)
+
+pd <- position_dodge(width =  0.5)
+
+var_names <-c("origin","strat","temp1" ,"temp2","temp3","origin × strat","origin × temp1","origin × temp2","origin × temp3",
+              "strat × temp1", "strat × temp2","strat × temp3","origin × strat × temp1", "origin × strat × temp2",
+              "origin × strat × temp3")
 getPalette = colorRampPalette(brewer.pal(13, "Set1"))
 
 locs_names<-loc_index[loc_index$loc %in% locs,]
 locs_names<-locs_names[order(as.numeric(as.character(locs_names$loc))),]
+locs_names$V1[5] <- "Europe--Just below Enzianhutte, \n above Zell Am See, Austria"
 
-fig2<-ggplot(dff, aes(x=Estimate, y=var, color=factor(as.numeric(loc)), size=factor(rndm), alpha=factor(rndm)))+
-  geom_point(position =pd, size=4)+
-  geom_errorbarh(aes(xmin=(`2.5%`), xmax=(`97.5%`)), position=pd, size=.5, height =0)+
-  geom_vline(xintercept=0)+
-  scale_colour_manual(labels = c("PLALAN_global", locs_names$V1),
-                      values=c("red", getPalette(13)))+  scale_alpha_manual(values=c(1, 0.5))+
-  scale_shape_manual(labels="", values=c("1"=16,"2"=16))+
-  scale_alpha_manual(values=c(1, 0.5))+
-  guides(alpha=FALSE) + #removes the legend 
-  ggtitle(label = "Germination day")+
-  scale_y_discrete(limits = (unique(sort(dff$var))))+
-  theme(legend.title = element_blank())+
+fig2<-ggplot(dff, aes(y=Estimate, x=var, color=factor(as.numeric(loc)), size=(rndm), alpha=(rndm)))+
+  geom_errorbar(aes(ymin=(`2.5%`), ymax=(`97.5%`)), position=pd, size=.8, width =0)+
+  geom_point(position =pd)+
+  geom_hline(yintercept=0)+
+  scale_colour_manual(labels =c("PLALAN global mean", locs_names$V1),
+                      values=c("gray48", getPalette(13)))+ 
+  scale_size_discrete(range=c(4,6))+
+  scale_alpha_discrete(range=c(.5,1))+ #(values=c(rep(0.2,7), 1))+
+  guides(alpha=FALSE, size=FALSE) + #removes the legend 
+  ggtitle(label = "b) Germination timing")+
+  scale_x_discrete(labels = var_names)+
+  labs(x="", y= "log (days)")+
   theme(legend.position = "none")+
-  theme(axis.text.y = element_blank())
-
+  theme_bw(12)+
+  theme(axis.text.x = element_blank())+
+  theme(plot.margin = unit(c(.1, .1, .1, .1), "cm"))+
+  theme(legend.title = element_blank())+
+  guides(color=FALSE)
 
 
 
@@ -286,17 +315,15 @@ fig2<-ggplot(dff, aes(x=Estimate, y=var, color=factor(as.numeric(loc)), size=fac
 ## PLALAN is species 4,
 sp_num<-4
 #model:
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_gr.Rdata") #this is my rstanarm  stanfit object.
 m<-mod_gr
 
 # model data: 
-load("C:/Users/Owner/Documents/github/germination_stan/datax.Rdata") 
+load("/home/harold/github/germination_stan/datax.rdata") 
 data<-datax
 # locations for PLALAN: 
 locs<-data[data$sp==sp_num ,"loc"] %>% unique() %>% sort()
 
 # location index: 
-load("C:/Users/Owner/Documents/GitHub/germination_stan/germs.Rdata") #cleaned and processed real data
 germs.y<-(subset(germs, germinated==1 & sp!="PLAMED" &  sp!="PLACOR"))    #just the data from seeds that germianted, and taking out the congenerics
 loc<-as.numeric(as.factor(germs.y$loc))
 loc_index <- cbind(germs.y$loc, loc) %>% as.data.frame() %>% unique() 
@@ -328,7 +355,7 @@ for (i in locs){
 #but I already had this code written up for something else, so used it again.
 
 sum.m <-
-  summary(
+  summary(probs=c(0.025,0.975),
     m,
     pars = c(
       paste("b[origin sp:",sp_num,"]",sep=""),
@@ -354,8 +381,10 @@ sum.m <-
     )
   )
 
-cri.f<-sum.m[,c(1,4,8)] #just selecting the mean and 95% CI.
-cri.f_reorder<-cri.f[c(nrow(cri.f)-14:nrow(cri.f),1:(nrow(cri.f)-15)),] # reording so global plalan is first 
+cri.f<-sum.m[,c(1,4,5)] #just selecting the mean and 95% CI.
+cri.f_reorder<-cri.f[c(196:210,1:195),] # reording so global plalan is first 
+fdf<-data.frame(cri.f_reorder)
+#cri.f_reorder<-cri.f[c(nrow(cri.f)-14:nrow(cri.f),1:(nrow(cri.f)-15)),] # reording so global plalan is first 
 fdf<-data.frame(cri.f_reorder)
 #binding 
 fdf2<-as.data.frame(
@@ -376,6 +405,7 @@ fdf2$`97.5%`<-as.numeric(fdf2$`97.5%`)
 
 #Global plalan effect estimates:
 plalan<-c(rep(0, 15), rep(as.numeric(fdf2[c(1:15),"Estimate"]), each=length(locs)))
+
 dff<-fdf2
 
 #adding the fixef estiamtes to the random effect values:
@@ -383,11 +413,20 @@ dff$Estimate<-fdf2$Estimate+plalan
 dff$`2.5%`<-fdf2$`2.5%`+plalan
 dff$`97.5%`<-fdf2$`97.5%`+plalan
 
-dff$var <- fct_inorder(dff$var) #so that the categorical variables plot in the right order 
+dff$var <- fct_inorder(dff$var) %>% fct_rev() #so that the categorical variables plot in the right order 
+dff$var2 <- rev(levels(dff$var))
+dff$rndm <- fct_rev(dff$rndm) 
+
+dff<-dff[c(16:nrow(dff), 1:15),] # so that the main effects plot on top 
 
 ## plotting
 
-pd <- position_dodgev(height = -0.5)
+
+pd <- position_dodge(width =  0.5)
+
+var_names <-c("origin","strat","temp1" ,"temp2","temp3","origin × strat","origin × temp1","origin × temp2","origin × temp3",
+              "strat × temp1", "strat × temp2","strat × temp3","origin × strat × temp1", "origin × strat × temp2",
+              "origin × strat × temp3")
 getPalette = colorRampPalette(brewer.pal(13, "Set1"))
 
 locs_names<-loc_index[loc_index$loc %in% locs,]
@@ -396,20 +435,40 @@ locs_names$short <-c("N. France", "Denmark", "S. Slovenia", "S. France", "Austri
                      "Germany", "N. Slovenia", "Liechtenstein", "Netherlands", "Austria (low altitude)",
                      "USA--Boston", "USA--Concord")
 
-fig3<-ggplot(dff, aes(x=Estimate, y=var, color=factor(as.numeric(loc)), size=factor(rndm), alpha=factor(rndm)))+
-  geom_point(position =pd, size=4)+
-  geom_errorbarh(aes(xmin=(`2.5%`), xmax=(`97.5%`)), position=pd, size=.5, height =0)+
-  geom_vline(xintercept=0)+
+fig3<-ggplot(dff, aes(y=Estimate, x=var, color=factor(as.numeric(loc)), size=(rndm), alpha=(rndm)))+
+  geom_errorbar(aes(ymin=(`2.5%`), ymax=(`97.5%`)), position=pd, size=.8, width =0)+
+  geom_point(position =pd)+
+  geom_hline(yintercept=0)+
   scale_colour_manual( labels = c("PLALAN_global", locs_names$short),
-                      values=c("red", getPalette(13)))+  scale_alpha_manual(values=c(1, 0.5))+
-  scale_shape_manual(labels="", values=c("1"=16,"2"=16))+
-  scale_alpha_manual(values=c(1, 0.5))+
-  guides(alpha=FALSE) + #removes the legend 
-  ggtitle(label = "Growth rate")+
-  scale_y_discrete(limits = (unique(sort(dff$var))))+
-  theme(legend.title = element_blank())+
-  theme(legend.position = "right", legend.text = element_text(size = 8))+
-  theme(axis.text.y = element_blank())
+                       values=c("gray48", getPalette(13)))+
+  scale_size_discrete(range=c(4,6))+
+  scale_alpha_discrete(range=c(.5,1))+ #(values=c(rep(0.2,7), 1))+
+  guides(alpha=FALSE, size=FALSE) + #removes the legend 
+  ggtitle(label = "c) Growth rate")+
+  scale_x_discrete(labels = var_names)+
+  labs(x="", y= "cm/day")+
+  theme(legend.position = "none")+
+  theme_bw(12)+
+  theme(axis.text.x = element_text(angle = 60, hjust=1, vjust=.9))+
+  theme(plot.margin = unit(c(.1, .1, .1, .1), "cm"))+
+  theme(legend.title = element_blank())
+
+#guides(color=FALSE)
+
+fig3n<-fig3 + theme(legend.position ="none") 
+
+
+grid<-  plot_grid(fig1, fig2, fig3n, nrow=3, rel_heights = c(1,1,1.5), axis='l', align='v')
+#extract legend
+legend <- get_legend( 
+  # create some space to the left of the legend
+  #  fig2+ guides(color = guide_legend(nrow = 1)) +
+  #   theme(legend.position = "bottom")
+  fig3 + theme(legend.box.margin = margin(12, 0, 0, 12))
+)
+final  <- plot_grid(grid, legend, ncol=2, rel_widths = c(3,.8), axis='t', align="h")
+
+ggsave("PLALAN_pops_plot.svg",final, device = "svg",width = 10, height=11, units="in")
 
 if(print==TRUE){
   pdf(file = "PLALAN_pops_plot.pdf", width = 14, height= 10)

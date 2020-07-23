@@ -1,5 +1,6 @@
 #Code to plot model coefficients for germination rate, time, and growth rate. 
 #Written by Harold Eyster 1/15/18
+# revised with flipped axes (variables on y-axis) 7/22/20
 
 ## housekeeping
 rm(list=ls()) 
@@ -7,7 +8,6 @@ options(stringsAsFactors = FALSE)
 options(shinystan.rstudio = TRUE)
 options(mc.cores = parallel::detectCores())
 
-setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
 source("http://peterhaschke.com/Code/multiplot.R") #so that the multiplot function works 
 source("https://raw.githubusercontent.com/jaredlander/coefplot/master/R/position.r") # for vertical dodging 
 
@@ -22,21 +22,22 @@ library(brms)
 library(tidyr)
 library(RCurl)
 library(forcats)
+library(RColorBrewer)
+library(here)
+library(cowplot)
 
+# colors: 
+getPalette = colorRampPalette(brewer.pal(7, "Set1"))
 
+# plotting function: 
+modplot<-function(model,title, units, legend){
+  
 
-####### Days from Germination Plot:
-#######
-#######
-
-#model:
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois.Rdata") #this is my rstanarm  stanfit object.
-m<-mod_time_pois
 # This is an Rstanarm object. The coeffs have to be extracted.  There's probably a better way to do this, 
 #but I already had this code written up for something else, so used it again.
 sum.m <-
-  summary(
-    m,
+  summary(probs=c(0.025,0.975),
+    model,
     pars = c(
       "(Intercept)",
       "origin",
@@ -169,7 +170,7 @@ sum.m <-
     )
   )
 
-cri.f<-sum.m[c(2:121),c(1,4,8)] #just selecting the mean and 95% CI. Removing the intercept 
+cri.f<-sum.m[c(2:121),c(1,4,5)] #just selecting the mean and 95% CI. Removing the intercept 
 fdf<-data.frame(cri.f)
 #binding 
 fdf2<-as.data.frame(
@@ -179,7 +180,7 @@ fdf2<-as.data.frame(
     as.numeric(as.character(fdf$X2.5.)), #lower bound, 95% CI
     as.numeric(as.character(fdf$X97.5.)),  #upper bound, 95% CI
     as.numeric(c(rep(1, 15), rep(2, 105))),  # A variable to signify if the corresponding row is a fixed  or random effect. 1=global, 2=rndm
-    as.numeric( c(rep(0,15), rep(seq(1:7),15 ))))) #sp variable. Zero when a factor 
+    as.numeric( c(rep(0,15), rep(seq(1,7),15 ))))) #sp variable. Zero when a factor 
 
 names(fdf2)<-c("var", "Estimate", colnames(cri.f)[c(2,3)], "rndm", "sp") #renaming. 
 
@@ -197,418 +198,76 @@ dff$Estimate<-fdf2$Estimate+fixed
 dff$`2.5%`<-fdf2$`2.5%`+fixed
 dff$`97.5%`<-fdf2$`97.5%`+fixed
 
-dff$var <- fct_inorder(dff$var) #so that the categorical variables plot in the right order 
+dff$var <- fct_inorder(dff$var)# %>% fct_rev() # so that the categorical variables plot in the right order 
+dff$rndm <- fct_rev(dff$rndm) 
+dff$sp <- factor(dff$sp, levels=c(0,1:3,4:7))
 
-## plotting
+dff<-dff[c(16:120, 1:15),] # so that the main effects plot on top 
+pd <- position_dodge(width =  0.5)
 
-pd <- position_dodgev(height = -0.5)
-
-
-fig1<-ggplot(dff, aes(x=Estimate, y=var, color=factor(sp), size=factor(rndm), alpha=factor(rndm)))+
-  geom_point(position =pd, size=4)+
-  geom_errorbarh(aes(xmin=(`2.5%`), xmax=(`97.5%`)), position=pd, size=.5, height =0)+
-  geom_vline(xintercept=0)+
-  scale_colour_manual(labels = c("Fixed effects", "CAPBUR", "CHEMAJ", "DACGLO", "PLALAN", "PLAMAJ", "RUMCRI", "TAROFF"),
-                      values=c("blue", "red", "orangered1", "sienna4", "green4", "green1", "purple2", "magenta2"))+  scale_alpha_manual(values=c(1, 0.5))+
-  scale_shape_manual(labels="", values=c("1"=16,"2"=16))+
-  scale_alpha_manual(values=c(1, 0.5))+
-  guides(alpha=FALSE) + #removes the legend 
-  ggtitle(label = "Germination day")+
-  scale_y_discrete(limits = rev(unique(sort(dff$var))))+
-  theme(legend.title = element_blank())
+var_names <-c("origin","strat","temp1" ,"temp2","temp3","origin × strat","origin × temp1","origin × temp2","origin × temp3",
+              "strat × temp1", "strat × temp2","strat × temp3","origin × strat × temp1", "origin × strat × temp2",
+              "origin × strat × temp3")
+fig<-
+    
+    ggplot(dff, aes(y=Estimate, x=var, color=(sp),alpha=rndm, size=factor(rndm))) + # , alpha=factor(r,ndm)))+
+    geom_errorbar(aes(ymin=(`2.5%`), ymax=(`97.5%`)), position=pd, size=.8, width =0)+
+    geom_point(position=pd)+
+    #geom_point(data = subset(dff, rndm == 1), position=pd)+
+    geom_hline(yintercept=0)+
+    scale_colour_manual(labels = c("Global mean", expression(italic("Capsella bursa-pastoris")), 
+                                   expression(italic("Chelidonium majus")), expression(italic("Dactylis glomerata")),
+                                   expression(italic("Plantago lanceolata")), expression(italic("Plantago major")),
+                                   expression(italic("Rumex crispus")),expression(italic("Taraxacum officinale"))),
+                        values=c("gray48",getPalette(7)))+
+    scale_size_discrete(range=c(4,6))+
+    scale_alpha_discrete(range=c(.5,1))+ #(values=c(rep(0.2,7), 1))+
+    guides(alpha=FALSE, size=FALSE) + #removes the legend 
+    ggtitle(label = paste(title))+
+    labs(x="", y=paste(units))+
+    scale_x_discrete(labels = var_names) + # rev(unique(sort(dff$var))))+
+    theme_bw(12)+
+    theme(axis.text.x = element_text(angle = 60, hjust=1, vjust=.9))+
+    theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))+
+    theme(legend.title = element_blank())+
+  
+if(legend==FALSE){
+  guides(color=FALSE) }
 #pdf(file.path(figpath, "Fig2.pdf"), width = 7, height = 8)
-fig1
-#dev.off()
-
-#####
-#####
-#####Germination Rate Plot 
-
-#data: 
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_rate.Rdata") #this nd the next models are  rstanarm stanfit objects
-m<-mod_rate 
-# This is an Rstanarm object, and so behaves differently than th previous brms object. Thus the coeffs have to be extracted 
-#differently.  There's probably a better way to do this, but I already had this code written up for something else, so used it again.
-sum.m <-
-  summary(
-    m,
-    pars = c(
-      "(Intercept)",
-      "origin",
-      "strat",
-      "temp1",
-      "temp2",
-      "temp3",
-      "origin:strat",
-      "origin:temp1",
-      "origin:temp2",
-      "origin:temp3",
-      "strat:temp1",
-      "strat:temp2",
-      "strat:temp3",
-      "origin:strat:temp1",
-      "origin:strat:temp2",
-      "origin:strat:temp3"
-      ,
-      "b[origin sp:1]",
-      "b[strat sp:1]",
-      "b[temp1 sp:1]",
-      "b[temp2 sp:1]",
-      "b[temp3 sp:1]",
-      "b[origin:strat sp:1]",
-      "b[origin:temp1 sp:1]",
-      "b[origin:temp2 sp:1]",
-      "b[origin:temp3 sp:1]",
-      "b[strat:temp1 sp:1]",
-      "b[strat:temp2 sp:1]",
-      "b[strat:temp3 sp:1]",
-      "b[origin:strat:temp1 sp:1]",
-      "b[origin:strat:temp2 sp:1]",
-      "b[origin:strat:temp3 sp:1]"
-      ,
-      "b[origin sp:2]",
-      "b[strat sp:2]",
-      "b[temp1 sp:2]",
-      "b[temp2 sp:2]",
-      "b[temp3 sp:2]",
-      "b[origin:strat sp:2]",
-      "b[origin:temp1 sp:2]",
-      "b[origin:temp2 sp:2]",
-      "b[origin:temp3 sp:2]",
-      "b[strat:temp1 sp:2]",
-      "b[strat:temp2 sp:2]",
-      "b[strat:temp3 sp:2]",
-      "b[origin:strat:temp1 sp:2]",
-      "b[origin:strat:temp2 sp:2]",
-      "b[origin:strat:temp3 sp:2]"
-      ,
-      "b[origin sp:3]",
-      "b[strat sp:3]",
-      "b[temp1 sp:3]",
-      "b[temp2 sp:3]",
-      "b[temp3 sp:3]",
-      "b[origin:strat sp:3]",
-      "b[origin:temp1 sp:3]",
-      "b[origin:temp2 sp:3]",
-      "b[origin:temp3 sp:3]",
-      "b[strat:temp1 sp:3]",
-      "b[strat:temp2 sp:3]",
-      "b[strat:temp3 sp:3]",
-      "b[origin:strat:temp1 sp:3]",
-      "b[origin:strat:temp2 sp:3]",
-      "b[origin:strat:temp3 sp:3]"
-      ,
-      "b[origin sp:4]",
-      "b[strat sp:4]",
-      "b[temp1 sp:4]",
-      "b[temp2 sp:4]",
-      "b[temp3 sp:4]",
-      "b[origin:strat sp:4]",
-      "b[origin:temp1 sp:4]",
-      "b[origin:temp2 sp:4]",
-      "b[origin:temp3 sp:4]",
-      "b[strat:temp1 sp:4]",
-      "b[strat:temp2 sp:4]",
-      "b[strat:temp3 sp:4]",
-      "b[origin:strat:temp1 sp:4]",
-      "b[origin:strat:temp2 sp:4]",
-      "b[origin:strat:temp3 sp:4]"
-      ,
-      "b[origin sp:5]",
-      "b[strat sp:5]",
-      "b[temp1 sp:5]",
-      "b[temp2 sp:5]",
-      "b[temp3 sp:5]",
-      "b[origin:strat sp:5]",
-      "b[origin:temp1 sp:5]",
-      "b[origin:temp2 sp:5]",
-      "b[origin:temp3 sp:5]",
-      "b[strat:temp1 sp:5]",
-      "b[strat:temp2 sp:5]",
-      "b[strat:temp3 sp:5]",
-      "b[origin:strat:temp1 sp:5]",
-      "b[origin:strat:temp2 sp:5]",
-      "b[origin:strat:temp3 sp:5]"
-      ,
-      "b[origin sp:6]",
-      "b[strat sp:6]",
-      "b[temp1 sp:6]",
-      "b[temp2 sp:6]",
-      "b[temp3 sp:6]",
-      "b[origin:strat sp:6]",
-      "b[origin:temp1 sp:6]",
-      "b[origin:temp2 sp:6]",
-      "b[origin:temp3 sp:6]",
-      "b[strat:temp1 sp:6]",
-      "b[strat:temp2 sp:6]",
-      "b[strat:temp3 sp:6]",
-      "b[origin:strat:temp1 sp:6]",
-      "b[origin:strat:temp2 sp:6]",
-      "b[origin:strat:temp3 sp:6]"
-      ,
-      "b[origin sp:7]",
-      "b[strat sp:7]",
-      "b[temp1 sp:7]",
-      "b[temp2 sp:7]",
-      "b[temp3 sp:7]",
-      "b[origin:strat sp:7]",
-      "b[origin:temp1 sp:7]",
-      "b[origin:temp2 sp:7]",
-      "b[origin:temp3 sp:7]",
-      "b[strat:temp1 sp:7]",
-      "b[strat:temp2 sp:7]",
-      "b[strat:temp3 sp:7]",
-      "b[origin:strat:temp1 sp:7]",
-      "b[origin:strat:temp2 sp:7]",
-      "b[origin:strat:temp3 sp:7]"
-    )
-  )
-
-cri.f<-sum.m[c(2:121),c(1,4,8)] #just selecting the mean and 95% CI. Removing the intercept 
-fdf<-data.frame(cri.f)
-#binding 
-fdf2<-as.data.frame(
-  cbind(
-    (c(rownames(fdf)[1:15], rep(rev(rownames(fdf)[1:15]), each=7))), #stdarzing the parameter  names 
-                             as.numeric(as.character(fdf$mean)),  # the estimate 
-                             as.numeric(as.character(fdf$X2.5.)), #lower bound, 95% CI
-                             as.numeric(as.character(fdf$X97.5.)),  #upper bound, 95% CI
-                             as.numeric(c(rep(1, 15), rep(2, 105))),  # A variable to signify if the corresponding row is a fixed  or random effect. 1=global, 2=rndm
-                            as.numeric( c(rep(0,15), rep(seq(1:7),15 ))))) #sp variable. Zero when a factor 
-
-names(fdf2)<-c("var", "Estimate", colnames(cri.f)[c(2,3)], "rndm", "sp") #renaming. 
-
-fdf2$Estimate<-as.numeric(fdf2$Estimate)      
-fdf2$`2.5%`<-as.numeric(fdf2$`2.5%`)
-fdf2$`97.5%`<-as.numeric(fdf2$`97.5%`)      
+  modfig <<- fig
+}
 
 
-#Fixed effect estimates:
-fixed<-c(rep(0, 15), rep(as.numeric(rev(fdf2[c(1:15),2])), each=7))
-dff<-fdf2
+### Loading models: 
+load("/home/harold/Dropbox/gitfiles/germ/mod_time_pois.rdata") #this is my rstanarm  stanfit object.
+load("/home/harold/Dropbox/gitfiles/germ/mod_rate.rdata") #this nd the next models are  rstanarm stanfit objects
+load("/home/harold/Dropbox/gitfiles/germ/mod_gr.rdata")
 
-#adding the fixef estiamtes to the random effect values:
-dff$Estimate<-fdf2$Estimate+fixed
-dff$`2.5%`<-fdf2$`2.5%`+fixed
-dff$`97.5%`<-fdf2$`97.5%`+fixed
+# running function: 
+fig1<-modplot(model=mod_time_pois, "b) Germination timing", "log(days)", legend=FALSE)
+fig1<-  fig1+ theme(axis.text.x = element_blank())
 
-dff$var <- fct_inorder(dff$var) #so that the categorical variables plot in the right order 
+fig2<-modplot(model=mod_rate, "a) Germination rate", "logit(fraction)", legend=TRUE) + theme(axis.text.x = element_blank())
 
-## plotting
+fig3 <- modplot(model=mod_gr, "c) Growth rate", "cm/day", legend=FALSE)
 
-pd <- position_dodgev(height = -0.5)
-
-
-fig2<-ggplot(dff, aes(x=Estimate, y=var, color=factor(sp), size=factor(rndm), alpha=factor(rndm)))+
-  geom_point(position =pd, size=4)+
-  geom_errorbarh(aes(xmin=(`2.5%`), xmax=(`97.5%`)), position=pd, size=.5, height =0)+
-  geom_vline(xintercept=0)+
-  scale_colour_manual(labels = c("Fixed effects", "CAPBUR", "CHEMAJ", "DACGLO", "PLALAN", "PLAMAJ", "RUMCRI", "TAROFF"),
-                      values=c("blue", "red", "orangered1", "sienna4", "green4", "green1", "purple2", "magenta2"))+  scale_alpha_manual(values=c(1, 0.5))+
-  scale_shape_manual(labels="", values=c("1"=16,"2"=16))+
-  scale_alpha_manual(values=c(1, 0.5))+
-  guides(alpha=FALSE) + #removes the legend 
-  ggtitle(label = "Germination rate")+
-  scale_y_discrete(limits = rev(unique(sort(dff$var))))+
-  theme(legend.title = element_blank())
-#pdf(file.path(figpath, "Fig2.pdf"), width = 7, height = 8)
-fig2
-#dev.off()
-
-#####
-#####
-#####
-#next, growth rate:
-
-#data: 
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_gr.Rdata")
-
-m<-mod_gr
-sum.m <-
-  summary(
-    m,
-    pars = c(
-      "(Intercept)",
-      "origin",
-      "strat",
-      "temp1",
-      "temp2",
-      "temp3",
-      "origin:strat",
-      "origin:temp1",
-      "origin:temp2",
-      "origin:temp3",
-      "strat:temp1",
-      "strat:temp2",
-      "strat:temp3",
-      "origin:strat:temp1",
-      "origin:strat:temp2",
-      "origin:strat:temp3"
-      ,
-      "b[origin sp:1]",
-      "b[strat sp:1]",
-      "b[temp1 sp:1]",
-      "b[temp2 sp:1]",
-      "b[temp3 sp:1]",
-      "b[origin:strat sp:1]",
-      "b[origin:temp1 sp:1]",
-      "b[origin:temp2 sp:1]",
-      "b[origin:temp3 sp:1]",
-      "b[strat:temp1 sp:1]",
-      "b[strat:temp2 sp:1]",
-      "b[strat:temp3 sp:1]",
-      "b[origin:strat:temp1 sp:1]",
-      "b[origin:strat:temp2 sp:1]",
-      "b[origin:strat:temp3 sp:1]"
-      ,
-      "b[origin sp:2]",
-      "b[strat sp:2]",
-      "b[temp1 sp:2]",
-      "b[temp2 sp:2]",
-      "b[temp3 sp:2]",
-      "b[origin:strat sp:2]",
-      "b[origin:temp1 sp:2]",
-      "b[origin:temp2 sp:2]",
-      "b[origin:temp3 sp:2]",
-      "b[strat:temp1 sp:2]",
-      "b[strat:temp2 sp:2]",
-      "b[strat:temp3 sp:2]",
-      "b[origin:strat:temp1 sp:2]",
-      "b[origin:strat:temp2 sp:2]",
-      "b[origin:strat:temp3 sp:2]"
-      ,
-      "b[origin sp:3]",
-      "b[strat sp:3]",
-      "b[temp1 sp:3]",
-      "b[temp2 sp:3]",
-      "b[temp3 sp:3]",
-      "b[origin:strat sp:3]",
-      "b[origin:temp1 sp:3]",
-      "b[origin:temp2 sp:3]",
-      "b[origin:temp3 sp:3]",
-      "b[strat:temp1 sp:3]",
-      "b[strat:temp2 sp:3]",
-      "b[strat:temp3 sp:3]",
-      "b[origin:strat:temp1 sp:3]",
-      "b[origin:strat:temp2 sp:3]",
-      "b[origin:strat:temp3 sp:3]"
-      ,
-      "b[origin sp:4]",
-      "b[strat sp:4]",
-      "b[temp1 sp:4]",
-      "b[temp2 sp:4]",
-      "b[temp3 sp:4]",
-      "b[origin:strat sp:4]",
-      "b[origin:temp1 sp:4]",
-      "b[origin:temp2 sp:4]",
-      "b[origin:temp3 sp:4]",
-      "b[strat:temp1 sp:4]",
-      "b[strat:temp2 sp:4]",
-      "b[strat:temp3 sp:4]",
-      "b[origin:strat:temp1 sp:4]",
-      "b[origin:strat:temp2 sp:4]",
-      "b[origin:strat:temp3 sp:4]"
-      ,
-      "b[origin sp:5]",
-      "b[strat sp:5]",
-      "b[temp1 sp:5]",
-      "b[temp2 sp:5]",
-      "b[temp3 sp:5]",
-      "b[origin:strat sp:5]",
-      "b[origin:temp1 sp:5]",
-      "b[origin:temp2 sp:5]",
-      "b[origin:temp3 sp:5]",
-      "b[strat:temp1 sp:5]",
-      "b[strat:temp2 sp:5]",
-      "b[strat:temp3 sp:5]",
-      "b[origin:strat:temp1 sp:5]",
-      "b[origin:strat:temp2 sp:5]",
-      "b[origin:strat:temp3 sp:5]"
-      ,
-      "b[origin sp:6]",
-      "b[strat sp:6]",
-      "b[temp1 sp:6]",
-      "b[temp2 sp:6]",
-      "b[temp3 sp:6]",
-      "b[origin:strat sp:6]",
-      "b[origin:temp1 sp:6]",
-      "b[origin:temp2 sp:6]",
-      "b[origin:temp3 sp:6]",
-      "b[strat:temp1 sp:6]",
-      "b[strat:temp2 sp:6]",
-      "b[strat:temp3 sp:6]",
-      "b[origin:strat:temp1 sp:6]",
-      "b[origin:strat:temp2 sp:6]",
-      "b[origin:strat:temp3 sp:6]"
-      ,
-      "b[origin sp:7]",
-      "b[strat sp:7]",
-      "b[temp1 sp:7]",
-      "b[temp2 sp:7]",
-      "b[temp3 sp:7]",
-      "b[origin:strat sp:7]",
-      "b[origin:temp1 sp:7]",
-      "b[origin:temp2 sp:7]",
-      "b[origin:temp3 sp:7]",
-      "b[strat:temp1 sp:7]",
-      "b[strat:temp2 sp:7]",
-      "b[strat:temp3 sp:7]",
-      "b[origin:strat:temp1 sp:7]",
-      "b[origin:strat:temp2 sp:7]",
-      "b[origin:strat:temp3 sp:7]"
-    )
-  )
-
-cri.f<-sum.m[c(2:121),c(1,4,8)] #just selecting the mean and 95% CI. Removing the intercept 
-fdf<-data.frame(cri.f)
-#binding 
-fdf2<-as.data.frame(
-  cbind(
-    (c(rownames(fdf)[1:15], rep(rev(rownames(fdf)[1:15]), each=7))),
-    as.numeric(as.character(fdf$mean)), 
-    as.numeric(as.character(fdf$X2.5.)), 
-    as.numeric(as.character(fdf$X97.5.)), 
-    as.numeric(c(rep(1, 15), rep(2, 105))), 
-    as.numeric( c(rep(0,15), rep(seq(1:7),15 )))))
-
-names(fdf2)<-c("var", "Estimate", colnames(cri.f)[c(2,3)], "rndm", "sp")
-
-fdf2$Estimate<-as.numeric(fdf2$Estimate)      
-fdf2$`2.5%`<-as.numeric(fdf2$`2.5%`)
-fdf2$`97.5%`<-as.numeric(fdf2$`97.5%`)      
+## Putting them all together: 
+fig2n<-fig2 + theme(legend.position ="none") 
 
 
-#Fixed effect estimates 
-fixed<-c(rep(0, 15), rep(as.numeric(rev(fdf2[c(1:15),2])), each=7))
-dff<-fdf2
-#adding the fixef estiamtes to the random effect values 
+grid<-plot_grid(fig2n, fig1, fig3, nrow=3, rel_heights = c(1,1,1.4))
+#extract legend
+legend <- get_legend( 
+  # create some space to the left of the legend
+#  fig2+ guides(color = guide_legend(nrow = 1)) +
+ #   theme(legend.position = "bottom")
+  fig2 + theme(legend.box.margin = margin(12, 0, 0, 12))
+)
+final  <- plot_grid(grid, legend, ncol=2, rel_widths = c(3,.8), axis='t', align="h")
 
-dff$Estimate<-fdf2$Estimate+fixed
-dff$`2.5%`<-fdf2$`2.5%`+fixed
-dff$`97.5%`<-fdf2$`97.5%`+fixed
-
-dff$var <- fct_inorder(dff$var) #so that the categorical variables plot in the right order 
-
-## plotting
-
-pd <- position_dodgev(height = -0.5)
-
-
-fig3<-ggplot(dff, aes(x=Estimate, y=var, color=factor(sp), size=factor(rndm), alpha=factor(rndm)))+
-  geom_point(position =pd, size=4)+
-  geom_errorbarh(aes(xmin=(`2.5%`), xmax=(`97.5%`)), position=pd, size=.5, height =0)+
-  geom_vline(xintercept=0)+
-  scale_colour_manual(labels = c("Fixed effects", "CAPBUR", "CHEMAJ", "DACGLO", "PLALAN", "PLAMAJ", "RUMCRI", "TAROFF"),
-                      values=c("blue", "red", "orangered1", "sienna4", "green4", "green1", "purple2", "magenta2"))+  scale_alpha_manual(values=c(1, 0.5))+
-  scale_shape_manual(labels="", values=c("1"=16,"2"=16))+
-  scale_alpha_manual(values=c(1, 0.5))+
-  guides(alpha=FALSE) + #removes the legend 
-  ggtitle(label = "Growth rate")+
-  scale_y_discrete(limits = rev(unique(sort(dff$var))))+
-  theme(legend.title = element_blank())
-#pdf(file.path(figpath, "Fig3.pdf"), width = 7, height = 8)
-fig3
-#dev.off()
+ggsave("germ_figs_onepage.svg",final, device = "svg",width = 10,height=11, units="in")
+#plot_grid(fig2n, fig1, fig3, ncol=1, align = "hv", axis="l",greedy=TRUE)
+#plot_grid(fig2, fig1, fig3, ncol=1, rel_heights = c(1,.1,.7), align="v", axis = "l")
 
 #saving the files: 
 

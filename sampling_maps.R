@@ -12,7 +12,7 @@ getPalette = colorRampPalette(brewer.pal(13, "Set1"))
 
 
 clim_raw<-read.csv("avgtemps.csv")
-load("C:/Users/Owner/Documents/GitHub/germination_stan/germs.Rdata") #cleaned and processed real data
+load("/home/harold/github/germination_stan/germs.Rdata") #cleaned and processed real data
 germs.y<-(subset(germs, germinated==1 & sp!="PLAMED" &  sp!="PLACOR"))    #just the data from seeds that germianted, and taking out the congenerics
 loc<-as.numeric(as.factor(germs.y$loc))
 locs_names <- cbind(germs.y$loc, loc) %>% as.data.frame() %>% unique() 
@@ -24,24 +24,26 @@ names(clim)[7] <- "loc_num"
 clim_us<-clim[clim$lon<0,]
 clim_eu <- clim[clim$lon>0,]
 #jittering the two very-close point in Austria 
-sites_eu[clim_eu$loc_name=="Europe--Zell Am See, Austria","lon"]<-  
-       clim_eu[clim_eu$loc_name=="Europe--Zell Am See, Austria","lon"] + .2
 
 sites_eu <- st_as_sf(clim_eu, coords = c("lon", "lat"), 
                    crs = 4326, agr = "constant")
 sites_us <-st_as_sf(clim_us, coords = c("lon", "lat"), 
                     crs = 4326, agr = "constant")
+
+sites_eu[clim_eu$loc_name=="Europe--Zell Am See, Austria","lon"]<-  
+  clim_eu[clim_eu$loc_name=="Europe--Zell Am See, Austria","lon"] + .2
+
 world <- ne_countries(scale = "medium", returnclass = "sf")
 class(world)
 states <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
 states <- cbind(states, st_coordinates(st_centroid(states)))
-states$ID <- toTitleCase(states$ID)
+states$ID <- toTitleCase(as.character(states$ID))
 
 us<-ggplot(data = world) + geom_sf() + geom_sf(data=sites_us, size=5, color=getPalette(13)[11:13], shape=17)  +
   geom_sf(data = states, fill = NA) +
 coord_sf(xlim = c(-75, -70), ylim = c(40, 45))+
   theme(panel.grid.major = element_line(colour = "white"))
-pdf("us_collections.pdf", width = 6)
+#pdf("us_collections.pdf", width = 6)
  # geom_text(data = states[states$ID=="Massachusetts",], aes(X, Y, label = ID), size = 4) 
 
 eu<-ggplot(data = world) + geom_sf() + geom_sf(data=sites_eu, size=5, color=getPalette(16)[1:13])  +
