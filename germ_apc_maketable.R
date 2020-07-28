@@ -18,8 +18,8 @@ source("apc_withinsp.R")
 ##################################
 #### APCs for Growth Rate #### 
 #################################
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_gr.Rdata")
-load("C:/Users/Owner/Documents/github/germination_stan/datax.Rdata") 
+load("/home/harold/Dropbox/gitfiles/germ/mod_gr.rdata")
+load("/home/harold/github/germination_stan/datax.rdata") 
 gr_o<-apc(mod_gr,"origin",datax,type = "binary")
 gr_s<-apc(mod_gr,"strat",datax,type="binary")
 gr_sp<-apc(mod_gr, "sp",datax,type="categorical", nested=c("loc", "sfamily"))
@@ -43,8 +43,8 @@ gr_withinsp_apc = rbind(gr_withinsp_apc, a)
 ###################################
 
 
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_rate.Rdata") 
-load("C:/Users/Owner/Documents/github/germination_stan/rate_data.Rdata") 
+load("/home/harold/Dropbox/gitfiles/germ/mod_rate.rdata") 
+load("/home/harold/github/germination_stan/rate_data.rdata") 
 ge_o<-apc(mod_rate,"origin",rate_data,type="binary")
 ge_s<-apc(mod_rate,"strat",rate_data,type="binary")
 ge_sp<-apc(mod_rate,"sp",rate_data,type="categorical", nested=c("loc", "sfamily"))
@@ -59,8 +59,8 @@ ge_plalan<-apc_withinsp(mod_rate, "loc", rate_data,type = "categorical", nested=
 #### APCs for germ timing model ###
 ###################################
 
-load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois.Rdata") 
-load("C:/Users/Owner/Documents/github/germination_stan/time_data.rdata") 
+load("/home/harold/Dropbox/gitfiles/germ/mod_time_pois.rdata") 
+load("/home/harold/github/germination_stan/time_data.rdata") 
 t_o<-apc(mod_time_pois,"origin",time_data,type = "binary")
 t_s<-apc(mod_time_pois,"strat",time_data,type = "binary")
 t_sp<-apc(mod_time_pois, "sp", time_data, type="categorical", nested = c("loc", "sfamily"))
@@ -71,7 +71,27 @@ t_t3<-apc(mod_time_pois,"temp3", time_data, type="binary")
 
 t_plalan<-apc_withinsp(mod_time_pois, "loc", time_data,type = "categorical", nested="sfamily", sp=4)
 
+###############################
+### Making a figure ##########
+##############################
+apcdat<-rbind(ge_s,ge_t1, ge_t2, ge_t3,
+                t_s,t_t1,t_t2,t_t3,
+               gr_s, gr_t1,gr_t2,gr_t3)
+apcdat<-cbind(apcdat, 
+              "trait"= cbind(c(rep("Germination rate (fraction)",4), rep("Germination timing (days)",4), rep("Growth rate (cm/day)", 4))),
+              "var" = rep(c("strat", "temp1","temp2", "temp3"),3))
+fig<-ggplot(apcdat) + geom_point(aes(y = APC, x = var), size=4) + 
+  geom_errorbar(aes(ymin=APC-SE, ymax=APC+SE, x = var, width=.05))+ 
+facet_wrap(~(trait), scales = "free", strip.position = "left" , nrow=3)+
+xlab("Treatment")+
+  ylab("")+
+#  ylab("Average predictive comparisons")+
+  theme_bw(13)+
+theme(strip.background=element_blank(), strip.placement = "outside")
 
+#pdf(width=4, height = 6, file="apc_fig.pdf")
+#fig
+#dev.off()
 #################################
 ### Making a table #############
 ################################
@@ -112,7 +132,7 @@ row.names(table1)<-c("germination rate (fraction)", "germination date (days)", "
 table_t<-t(table1)
 print(xtable(table_t),tabular.environment = "longtable",include.rownames = TRUE, floating = FALSE, 
       sanitize.text.function = identity)
-setwd("C:/Users/Owner/Documents/github/germination_stan")
+setwd("/home/harold/github/germination_stan")
 
 
 #############################
@@ -121,7 +141,7 @@ setwd("C:/Users/Owner/Documents/github/germination_stan")
 
 list<-ls()
 list<-list[-which(list %in% c("mod_gr","mod_rate","mod_time_pois"))] # list all variables except the one you want to save
-save(list = list, file = "apc_germ_balanced.RData")
+save(list = list, file = "apc_germ_balanced.rdata")
 
 ## ARCHIVE 
 
@@ -143,8 +163,8 @@ save(list = list, file = "apc_germ_balanced.RData")
 # ppc_dens_overlay(y = datax$y,
 #                  yrep = E_u0) + xlim(0,100)
 # 
-# load("C:/Users/Owner/Documents/Thesis/Stan/mod_time_pois_brm_nt.Rdata")
-# load("C:/Users/owner/documents/thesis/stan/mod_time_pois.Rdata")
+# load("/home/harold/Dropbox/gitfiles/germ/mod_time_pois_brm_nt.rdata")
+# load("/home/harold/Dropbox/gitfiles/germ/mod_time_pois.rdata")
 # pp<-posterior_predict(mod_time_pois_brm)
 # pp_s<-as.data.frame(pp[10:20,])
 # ppg<-posterior_predict(mod_gr,draws=4000)
