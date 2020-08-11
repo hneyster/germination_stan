@@ -9,7 +9,7 @@ options(shinystan.rstudio = TRUE)
 options(mc.cores = parallel::detectCores())
 
 source("http://peterhaschke.com/Code/multiplot.R") #so that the multiplot function works 
-source("https://raw.githubusercontent.com/jaredlander/coefplot/master/R/position.r") # for vertical dodging 
+#source("https://raw.githubusercontent.com/jaredlander/coefplot/master/R/position.r") # for vertical dodging 
 
 
 
@@ -219,7 +219,7 @@ fig<-
                                    expression(italic("Chelidonium majus")), expression(italic("Dactylis glomerata")),
                                    expression(italic("Plantago lanceolata")), expression(italic("Plantago major")),
                                    expression(italic("Rumex crispus")),expression(italic("Taraxacum officinale"))),
-                        values=c("gray48",getPalette(7)))+
+                        values=c("black",getPalette(7)))+
     scale_size_discrete(range=c(4,6))+
     scale_alpha_discrete(range=c(.5,1))+ #(values=c(rep(0.2,7), 1))+
     guides(alpha=FALSE, size=FALSE) + #removes the legend 

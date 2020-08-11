@@ -7,8 +7,6 @@ rm(list=ls())
 options(stringsAsFactors = FALSE)
 options(shinystan.rstudio = TRUE)
 
-setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
-
 
 ##libraries
 library(rstan)
@@ -153,7 +151,7 @@ fig1<-ggplot(dff, aes(y=Estimate, x=var, color=factor(as.numeric(loc)), size=(rn
   geom_point(position =pd)+
   geom_hline(yintercept=0)+
   scale_colour_manual(labels =c("PLALAN global mean", locs_names$V1),
-                      values=c("gray48", getPalette(13)))+ 
+                      values=c("black", getPalette(13)))+ 
   scale_size_discrete(range=c(4,6))+
   scale_alpha_discrete(range=c(.5,1))+ #(values=c(rep(0.2,7), 1))+
   guides(alpha=FALSE, size=FALSE) + #removes the legend 
@@ -293,7 +291,7 @@ fig2<-ggplot(dff, aes(y=Estimate, x=var, color=factor(as.numeric(loc)), size=(rn
   geom_point(position =pd)+
   geom_hline(yintercept=0)+
   scale_colour_manual(labels =c("PLALAN global mean", locs_names$V1),
-                      values=c("gray48", getPalette(13)))+ 
+                      values=c("black", getPalette(13)))+ 
   scale_size_discrete(range=c(4,6))+
   scale_alpha_discrete(range=c(.5,1))+ #(values=c(rep(0.2,7), 1))+
   guides(alpha=FALSE, size=FALSE) + #removes the legend 
@@ -440,7 +438,7 @@ fig3<-ggplot(dff, aes(y=Estimate, x=var, color=factor(as.numeric(loc)), size=(rn
   geom_point(position =pd)+
   geom_hline(yintercept=0)+
   scale_colour_manual( labels = c("PLALAN_global", locs_names$short),
-                       values=c("gray48", getPalette(13)))+
+                       values=c("black", getPalette(13)))+
   scale_size_discrete(range=c(4,6))+
   scale_alpha_discrete(range=c(.5,1))+ #(values=c(rep(0.2,7), 1))+
   guides(alpha=FALSE, size=FALSE) + #removes the legend 
@@ -470,11 +468,11 @@ final  <- plot_grid(grid, legend, ncol=2, rel_widths = c(3,.8), axis='t', align=
 
 ggsave("PLALAN_pops_plot.svg",final, device = "svg",width = 10, height=11, units="in")
 
-if(print==TRUE){
-  pdf(file = "PLALAN_pops_plot.pdf", width = 14, height= 10)
-  multiplot(fig1,fig2,fig3, cols=3)
-  dev.off()
-}
+#if(print==TRUE){
+ # pdf(file = "PLALAN_pops_plot.pdf", width = 14, height= 10)
+  #multiplot(fig1,fig2,fig3, cols=3)
+  #dev.off()
+#}
 
 
 ### Climate data ### 
