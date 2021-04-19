@@ -1,6 +1,7 @@
 #Code to plot population-variation for germination rate, time, and growth rate for a single species, PLALAN
 #Written by Harold Eyster 1/19/20
 # adapted 7/22/20 with flipped axes 
+# changed temp names on 2021-04-18
 
 ## housekeeping
 rm(list=ls()) 
@@ -137,9 +138,9 @@ dff<-dff[c(16:nrow(dff), 1:15),] # so that the main effects plot on top
 
 pd <- position_dodge(width =  0.5)
 
-var_names <-c("origin","strat","temp1" ,"temp2","temp3","origin × strat","origin × temp1","origin × temp2","origin × temp3",
-              "strat × temp1", "strat × temp2","strat × temp3","origin × strat × temp1", "origin × strat × temp2",
-              "origin × strat × temp3")
+var_names <-c("origin","strat","22.7°C" ,"27.3°C","32°C","origin × strat","origin × 22.7°C","origin × 27.3°C","origin × 32°C",
+              "strat × 22.7°C", "strat × 27.3°C","strat × 32°C","origin × strat × 22.7°C", "origin × strat × 27.3°C",
+              "origin × strat × 32°C")
 getPalette = colorRampPalette(brewer.pal(13, "Set1"))
 
 locs_names<-loc_index[loc_index$loc %in% locs,]
@@ -155,7 +156,7 @@ fig1<-ggplot(dff, aes(y=Estimate, x=var, color=factor(as.numeric(loc)), size=(rn
   scale_size_discrete(range=c(4,6))+
   scale_alpha_discrete(range=c(.5,1))+ #(values=c(rep(0.2,7), 1))+
   guides(alpha=FALSE, size=FALSE) + #removes the legend 
-  ggtitle(label = "a) Germination rate")+
+  ggtitle(label = "a) Germination success")+
   scale_x_discrete(labels = var_names)+
   labs(x="", y= "logit (fraction)")+
   theme(legend.position = "none")+
@@ -277,9 +278,9 @@ dff<-dff[c(16:nrow(dff), 1:15),] # so that the main effects plot on top
 
 pd <- position_dodge(width =  0.5)
 
-var_names <-c("origin","strat","temp1" ,"temp2","temp3","origin × strat","origin × temp1","origin × temp2","origin × temp3",
-              "strat × temp1", "strat × temp2","strat × temp3","origin × strat × temp1", "origin × strat × temp2",
-              "origin × strat × temp3")
+var_names <-c("origin","strat","22.7°C" ,"27.3°C","32°C","origin × strat","origin × 22.7°C","origin × 27.3°C","origin × 32°C",
+              "strat × 22.7°C", "strat × 27.3°C","strat × 32°C","origin × strat × 22.7°C", "origin × strat × 27.3°C",
+              "origin × strat × 32°C")
 getPalette = colorRampPalette(brewer.pal(13, "Set1"))
 
 locs_names<-loc_index[loc_index$loc %in% locs,]
@@ -422,9 +423,9 @@ dff<-dff[c(16:nrow(dff), 1:15),] # so that the main effects plot on top
 
 pd <- position_dodge(width =  0.5)
 
-var_names <-c("origin","strat","temp1" ,"temp2","temp3","origin × strat","origin × temp1","origin × temp2","origin × temp3",
-              "strat × temp1", "strat × temp2","strat × temp3","origin × strat × temp1", "origin × strat × temp2",
-              "origin × strat × temp3")
+var_names <-c("origin","strat","22.7°C" ,"27.3°C","32°C","origin × strat","origin × 22.7°C","origin × 27.3°C","origin × 32°C",
+              "strat × 22.7°C", "strat × 27.3°C","strat × 32°C","origin × strat × 22.7°C", "origin × strat × 27.3°C",
+              "origin × strat × 32°C")
 getPalette = colorRampPalette(brewer.pal(13, "Set1"))
 
 locs_names<-loc_index[loc_index$loc %in% locs,]
@@ -473,7 +474,7 @@ ggsave("PLALAN_pops_plot.svg",final, device = "svg",width = 10, height=11, units
   #multiplot(fig1,fig2,fig3, cols=3)
   #dev.off()
 #}
-
+### ARCHIVE #####
 
 ### Climate data ### 
 clim_raw<-read.csv("avgtemps.csv")

@@ -4,11 +4,6 @@ options(stringsAsFactors = FALSE)
 options(shinystan.rstudio = TRUE)
 options(mc.cores = parallel::detectCores())
 
-if(length(grep("Lizzie", getwd())>0)) { 
-  setwd("~/Documents/git/projects/misc/undergrads/harold/analyses/germination_stan") 
-} else 
-  setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
-
 ##libraries
 library(rstan)
 library(shinystan)
@@ -16,6 +11,7 @@ library(lme4)
 library(ggplot2)
 library(rstanarm)
 library(grid)
+library(here)
 #source("http://peterhaschke.com/Code/multiplot.R")
 ## to download the dev version of rstanarm: 
 #install.packages("devtools")
@@ -41,7 +37,7 @@ if (realdata==TRUE) {
   temp1<-ifelse(data$temp==16.0, 1, 0) #coding temperature as binary dummy variables
   temp2<-ifelse(data$temp==20.7, 1, 0) 
   temp3<-ifelse(data$temp==25.3,1, 0) 
-  strat<-ifelse(data$strat==30,0,1) 
+  strat<-ifelse(data$strat==60,0,1) # long strat/winter is the reference level (changed 2021-04-18)
   origin<-ifelse(data$origin=="Europe", 0, 1)
   intercept<-rep(1, nrow(data))
   #setting up to random effects data:
@@ -60,6 +56,7 @@ if (realdata==TRUE) {
   #putting all the data together: 
   datax <- data.frame(N=N, y=y, temp1=temp1, temp2=temp2, temp3=temp3 ,origin=origin, strat=strat,  
                       nsp=nsp, sp=sp, loc=loc, sfamily=sfamily)
+ # save(datax,file="datax.rdata")
 }
 
 ## fitting the stan model -------------------------------------------------
@@ -81,6 +78,7 @@ if (runstan==TRUE) {
   
   
   #now adding random slopes
+  # this is model used in paper: 
   
   mod_gr<-stan_lmer(y ~ origin + strat + temp1 + temp2 + temp3 + 
                           origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
@@ -97,6 +95,8 @@ if (runstan==TRUE) {
                         prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),
                         chains=4, iter=2000) # by default, creates four chains with 1000 warmup, and 1000 samling 
             #caused one divergent transition after warm-up
+  save(mod_gr, file="mod_gr.rdata")
+  
           
   #and checking against lmer model:
   mod_grfreq2<-lmer(y ~ origin + strat + temp1 + temp2 + temp3 + 
@@ -108,7 +108,6 @@ if (runstan==TRUE) {
                        (temp2 -1|sp/loc/sfamily) +  (temp3 -1|sp/loc/sfamily),
                      data=germdata)
   
-  save(mod_gr, file="mod_gr.Rdata")
 }
 
   #----launching shiny stan---------

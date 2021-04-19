@@ -1,6 +1,7 @@
 #Code to plot model coefficients for germination rate, time, and growth rate. 
 #Written by Harold Eyster 1/15/18
 # revised with flipped axes (variables on y-axis) 7/22/20
+# changed temp names on 2021-04-18
 
 ## housekeeping
 rm(list=ls()) 
@@ -205,9 +206,9 @@ dff$sp <- factor(dff$sp, levels=c(0,1:3,4:7))
 dff<-dff[c(16:120, 1:15),] # so that the main effects plot on top 
 pd <- position_dodge(width =  0.5)
 
-var_names <-c("origin","strat","temp1" ,"temp2","temp3","origin × strat","origin × temp1","origin × temp2","origin × temp3",
-              "strat × temp1", "strat × temp2","strat × temp3","origin × strat × temp1", "origin × strat × temp2",
-              "origin × strat × temp3")
+var_names <-c("origin","strat","22.7°C" ,"27.3°C","32°C","origin × strat","origin × 22.7°C","origin × 27.3°C","origin × 32°C",
+              "strat × 22.7°C", "strat × 27.3°C","strat × 32°C","origin × strat × 22.7°C", "origin × strat × 27.3°C",
+              "origin × strat × 32°C")
 fig<-
     
     ggplot(dff, aes(y=Estimate, x=var, color=(sp),alpha=rndm, size=factor(rndm))) + # , alpha=factor(r,ndm)))+
@@ -247,7 +248,7 @@ load("/home/harold/Dropbox/gitfiles/germ/mod_gr.rdata")
 fig1<-modplot(model=mod_time_pois, "b) Germination timing", "log(days)", legend=FALSE)
 fig1<-  fig1+ theme(axis.text.x = element_blank())
 
-fig2<-modplot(model=mod_rate, "a) Germination rate", "logit(fraction)", legend=TRUE) + theme(axis.text.x = element_blank())
+fig2<-modplot(model=mod_rate, "a) Germination success", "logit(fraction)", legend=TRUE) + theme(axis.text.x = element_blank())
 
 fig3 <- modplot(model=mod_gr, "c) Growth rate", "cm/day", legend=FALSE)
 

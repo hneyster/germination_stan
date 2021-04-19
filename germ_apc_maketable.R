@@ -78,8 +78,8 @@ apcdat<-rbind(ge_s,ge_t1, ge_t2, ge_t3,
                 t_s,t_t1,t_t2,t_t3,
                gr_s, gr_t1,gr_t2,gr_t3)
 apcdat<-cbind(apcdat, 
-              "trait"= cbind(c(rep("Germination rate (fraction)",4), rep("Germination timing (days)",4), rep("Growth rate (cm/day)", 4))),
-              "var" = rep(c("strat", "temp1","temp2", "temp3"),3))
+              "trait"= cbind(c(rep("Germination success (fraction)",4), rep("Germination timing (days)",4), rep("Growth rate (cm/day)", 4))),
+              "var" = rep(c("strat", "22.7°C","27.3°C", "32°C"),3))
 fig<-ggplot(apcdat) + geom_point(aes(y = APC, x = var), size=4) + 
   geom_errorbar(aes(ymin=APC-SE, ymax=APC+SE, x = var, width=.05))+ 
 facet_wrap(~(trait), scales = "free", strip.position = "left" , nrow=3)+

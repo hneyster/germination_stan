@@ -4,11 +4,6 @@ options(stringsAsFactors = FALSE)
 options(shinystan.rstudio = TRUE)
 options(mc.cores = parallel::detectCores())
 
-if(length(grep("Lizzie", getwd())>0)) { 
-  setwd("~/Documents/git/projects/misc/undergrads/harold/analyses/germination_stan") 
-} else 
-  setwd("C:/Users/Owner/Documents/GitHub/germination_stan")
-
 ##libraries
 library(plyr)
 library(rstan) #how to update rstan: https://discourse.mc-stan.org/t/updating-stan-from-r/3275 
@@ -17,8 +12,8 @@ library(lme4)
 library(ggplot2)
 library(rstanarm)
 library(brms)
-source("http://peterhaschke.com/Code/multiplot.R") #so that the multiplot function works 
-
+#source("http://peterhaschke.com/Code/multiplot.R") #so that the multiplot function works 
+library(here)
 ## to download the dev version of rstanarm: 
 #install.packages("devtools")
 #library(devtools)
@@ -44,7 +39,7 @@ if (realdata==TRUE) {
   temp1<-ifelse(data$temp==16.0, 1, 0) #coding temperature as binary dummy variables
   temp2<-ifelse(data$temp==20.7, 1, 0) 
   temp3<-ifelse(data$temp==25.3,1, 0) 
-  strat<-ifelse(data$strat==30,0,1) 
+  strat<-ifelse(data$strat==60,0,1) # long strat/winter is the reference level (changed 2021-04-18)
   origin<-ifelse(data$origin=="Europe", 0, 1)
   intercept<-rep(1, nrow(data))
   #setting up to random effects data:
@@ -100,8 +95,27 @@ if (realdata==TRUE) {
                    strat=as.numeric(fake$strat), N=nrow(fake),sp=as.numeric(fake$sp),
                    nsp=length(unique(fake$sp)))}
     ## Fitting models with rstanarm:
-  
-  
+# model 4: now trying Poisson error distribution: 
+## THis is the model used in the paper!!
+mod_time_pois<-stan_glmer(y ~ origin + strat + temp1 + temp2 + temp3 + 
+                            origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
+                            strat:temp1 + strat:temp2 + strat:temp3 +
+                            origin:strat:temp1 +  origin:strat:temp2 + origin:strat:temp3 + 
+                            (1|sp/loc/sfamily) +
+                            (origin -1|sp/loc/sfamily) + (strat -1|sp/loc/sfamily) + (temp1 -1|sp/loc/sfamily) + 
+                            (temp2 -1|sp/loc/sfamily) +  (temp3 -1|sp/loc/sfamily)+
+                            (origin:strat -1|sp/loc/sfamily) + (origin:temp1 -1|sp/loc/sfamily) + (origin:temp2 -1|sp/loc/sfamily) + 
+                            (origin:temp3 -1|sp/loc/sfamily) +  (strat:temp1 -1|sp/loc/sfamily) + (strat:temp2 -1|sp/loc/sfamily) + 
+                            (strat:temp3 -1|sp/loc/sfamily) + (origin:strat:temp1 -1|sp/loc/sfamily) + 
+                            (origin:strat:temp2 -1|sp/loc/sfamily) + (origin:strat:temp3 -1|sp/loc/sfamily),
+                          data=germdata, algorithm= "sampling", family=poisson,
+                          prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=2000)
+save(mod_time_pois, file ="mod_time_pois.rdata")
+
+
+#############################################################################
+############################# ARCHIVE #######################################
+#############################################################################  
     # Model 1: random intercept:
     mod__time_spint<-stan_lmer(log_y ~ origin + strat + temp1 + temp2 + temp3 +
        origin*strat + origin*temp1 + origin*temp2 + origin*temp3 +
@@ -139,21 +153,7 @@ if (realdata==TRUE) {
                           data=germdata, algorithm= "sampling",
                     prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=2000)
    
-   # model 4: now trying Poisson error distribution: 
-   ## THis is the model used in the paper!!
-   mod_time_pois<-stan_glmer(y ~ origin + strat + temp1 + temp2 + temp3 + 
-                               origin:strat + origin:temp1 + origin:temp2 + origin:temp3 + 
-                               strat:temp1 + strat:temp2 + strat:temp3 +
-                               origin:strat:temp1 +  origin:strat:temp2 + origin:strat:temp3 + 
-                               (1|sp/loc/sfamily) +
-                               (origin -1|sp/loc/sfamily) + (strat -1|sp/loc/sfamily) + (temp1 -1|sp/loc/sfamily) + 
-                               (temp2 -1|sp/loc/sfamily) +  (temp3 -1|sp/loc/sfamily)+
-                               (origin:strat -1|sp/loc/sfamily) + (origin:temp1 -1|sp/loc/sfamily) + (origin:temp2 -1|sp/loc/sfamily) + 
-                               (origin:temp3 -1|sp/loc/sfamily) +  (strat:temp1 -1|sp/loc/sfamily) + (strat:temp2 -1|sp/loc/sfamily) + 
-                               (strat:temp3 -1|sp/loc/sfamily) + (origin:strat:temp1 -1|sp/loc/sfamily) + 
-                               (origin:strat:temp2 -1|sp/loc/sfamily) + (origin:strat:temp3 -1|sp/loc/sfamily),
-                             data=germdata, algorithm= "sampling", family=poisson,
-                             prior=normal(), prior_intercept=normal(0,10), prior_aux=cauchy(0,5),  chains=4, iter=2000)
+
    
    #now trying a shifted response variable 
    mod_time_pois2<-stan_glmer((y-2) ~ origin + strat + temp1 + temp2 + temp3 + 
