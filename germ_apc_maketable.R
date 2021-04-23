@@ -139,9 +139,9 @@ setwd("/home/harold/github/germination_stan")
 ######### SAVING ###########
 ############################
 
-list<-ls()
-list<-list[-which(list %in% c("mod_gr","mod_rate","mod_time_pois"))] # list all variables except the one you want to save
-save(list = list, file = "apc_germ_balanced.rdata")
+#list<-ls()
+#list<-list[-which(list %in% c("mod_gr","mod_rate","mod_time_pois"))] # list all variables except the one you want to save
+#save(list = list, file = "apc_germ_balanced.rdata")
 
 ## ARCHIVE 
 
